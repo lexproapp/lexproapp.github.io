@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexPro LegalTrack - Gestión Jurídica</title>
+    
+    <!-- Fuentes y Estilos -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Íconos (Phosphor Icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Gráficos (Chart.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- FullCalendar (Para módulo de Agenda) -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+    <!-- Configuración Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#f0f4f8', 100: '#d9e2ec', 200: '#bcccdc', 500: '#3c629e', 600: '#2b4c80', 700: '#1e3a63', 900: '#102a43' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .glass-effect { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        .toast-enter { animation: slideIn 0.3s ease-out forwards; }
+        .toast-exit { animation: fadeOut 0.3s ease-out forwards; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .nav-active { background-color: #f0f4f8; color: #2b4c80; border-right: 3px solid #2b4c80;}
+        .fc-event { border-radius: 6px !important; padding: 2px 4px !important; border: none !important; cursor: pointer; }
+        .fc-event-main { font-weight: 500; font-size: 0.75rem; line-height: 1.2; white-space: normal !important; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+        .tab-fin-active { border-bottom: 2px solid #2b4c80; color: #2b4c80; font-weight: 600; }
+        .tab-fin-inactive { color: #6b7280; font-weight: 500; }
+        .tab-fin-inactive:hover { color: #374151; }
+        #api-loader { transition: opacity 0.3s; }
+        
+        /* Ajustes FullCalendar Toolbar */
+        .fc-toolbar-title { font-size: 1.25rem !important; font-weight: 700 !important; color: #1e3a63; }
+        .fc-button { font-family: 'Inter', sans-serif !important; font-weight: 500 !important; text-transform: capitalize !important; transition: all 0.2s !important; }
+        .fc-button-primary { background-color: white !important; border: 1px solid #d9e2ec !important; color: #475569 !important; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important; }
+        .fc-button-primary:hover { background-color: #f8fafc !important; color: #1e3a63 !important; }
+        .fc-button-active { background-color: #f0f4f8 !important; border-color: #bcccdc !important; color: #2b4c80 !important; font-weight: 600 !important; }
+        .fc-today-button { background-color: #2b4c80 !important; color: white !important; border-color: #2b4c80 !important; }
+        .fc-today-button:hover { background-color: #1e3a63 !important; color: white !important; }
+        .fc-today-button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .fc .fc-button-group > .fc-button { border-radius: 0 !important; }
+        .fc .fc-button-group > .fc-button:first-child { border-top-left-radius: 0.5rem !important; border-bottom-left-radius: 0.5rem !important; }
+        .fc .fc-button-group > .fc-button:last-child { border-top-right-radius: 0.5rem !important; border-bottom-right-radius: 0.5rem !important; }
+        .fc-theme-standard td, .fc-theme-standard th { border-color: #e2e8f0 !important; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased h-screen flex overflow-hidden">
+
+    <!-- OVERLAY CARGA GLOBAL -->
+    <div id="api-loader" class="fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center hidden">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mb-4"></div>
+        <p class="text-brand-900 font-medium animate-pulse" id="api-loader-text">Conectando con la base de datos...</p>
+    </div>
+
+    <!-- Sidebar Lateral -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex flex-col hidden md:flex transition-all duration-300 z-20">
+        <div class="py-6 flex items-center justify-center px-4 border-b border-gray-200 bg-white">
+            <img src="https://i.postimg.cc/HWBRJQtB/Logo-Lex-Pro.png" alt="Logo LexPro" class="h-20 w-auto object-contain">
+        </div>
+        
+        <nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto" id="sidebar-nav">
+            <a href="#" onclick="switchView('dashboard', this)" class="nav-item nav-active flex items-center px-3 py-2.5 rounded-lg font-medium transition-colors">
+                <i class="ph ph-squares-four text-lg mr-3"></i> Dashboard
+            </a>
+            <a href="#" onclick="switchView('clientes', this)" class="nav-item text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center px-3 py-2.5 rounded-lg font-medium transition-colors">
+                <i class="ph ph-users text-lg mr-3"></i> Clientes
+            </a>
+            <a href="#" onclick="switchView('asuntos', this)" class="nav-item text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center px-3 py-2.5 rounded-lg font-medium transition-colors">
+                <i class="ph ph-briefcase text-lg mr-3"></i> Asuntos
+            </a>
+            <a href="#" onclick="switchView('agenda', this)" class="nav-item text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center px-3 py-2.5 rounded-lg font-medium transition-colors">
+                <i class="ph ph-calendar-blank text-lg mr-3"></i> Agenda
+            </a>
+            <a href="#" onclick="switchView('equipo', this)" class="nav-item text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center px-3 py-2.5 rounded-lg font-medium transition-colors">
+                <i class="ph ph-users-three text-lg mr-3"></i> Equipo
+            </a>
+            <a href="#" onclick="switchView('finanzas', this)" class="nav-item text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center px-3 py-2.5 rounded-lg font-medium transition-colors">
+                <i class="ph ph-currency-circle-dollar text-lg mr-3"></i> Finanzas
+            </a>
+            <a href="#" onclick="switchView('reportes', this)" class="nav-item text-gray-600 hover:bg-gray-50 hover:text-gray-900 flex items-center px-3 py-2.5 rounded-lg font-medium transition-colors">
+                <i class="ph ph-file-pdf text-lg mr-3"></i> Reportes
+            </a>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-200 flex flex-col space-y-4 bg-gray-50/50">
+            <div class="text-[10px] text-gray-400 text-center leading-tight">
+                <span class="font-bold text-gray-500 block">LexPro - LegalTrack</span>
+                <span class="block mt-1">©Todos los Derechos Reservados</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Contenido Principal -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <header class="h-16 glass-effect border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 lg:px-8 sticky top-0 z-10">
+            <div class="flex items-center flex-1 gap-3">
+                <img src="https://i.postimg.cc/HWBRJQtB/Logo-Lex-Pro.png" alt="Logo" class="h-12 w-auto md:hidden">
+                <div class="max-w-md w-full relative">
+                    <i class="ph ph-magnifying-glass absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" placeholder="Buscar radicado, cliente, documento..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 text-sm transition-shadow">
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div id="conn-status" class="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 hidden items-center"><i class="ph ph-plugs mr-1"></i> Modo Local</div>
+                <div id="sync-status" class="text-xs font-medium px-2 py-1 text-gray-400 hidden items-center"><i class="ph ph-arrows-clockwise animate-spin mr-1"></i> Sincronizando</div>
+                
+                <div class="relative">
+                    <button onclick="toggleNotifications()" class="text-gray-400 hover:text-gray-500 relative focus:outline-none">
+                        <i class="ph ph-bell text-xl"></i>
+                        <span id="notif-badge" class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
+                    </button>
+                    <div id="notif-dropdown" class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 hidden z-50 overflow-hidden">
+                        <div class="p-3 bg-gray-50 border-b border-gray-100 font-bold text-sm text-gray-700 flex justify-between items-center">
+                            <span>Próximas Actividades</span>
+                            <i class="ph ph-calendar-check text-brand-600"></i>
+                        </div>
+                        <div id="notif-list" class="max-h-64 overflow-y-auto">
+                            <!-- Aquí se inyectan las notificaciones JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENEDOR DE VISTAS -->
+        <div class="flex-1 overflow-y-auto relative bg-gray-50">
+            
+            <!-- VISTA 1: DASHBOARD -->
+            <div id="view-dashboard" class="p-4 sm:p-6 lg:p-8 transition-opacity duration-300">
+                <div class="max-w-7xl mx-auto space-y-6">
+                    <div><h1 class="text-2xl font-bold text-gray-900">Resumen General</h1></div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm"><p class="text-sm text-gray-500">Procesos Activos</p><h3 class="text-3xl font-bold text-brand-900" id="val-active-cases">-</h3></div>
+                        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm"><p class="text-sm text-gray-500">Eventos Pendientes</p><h3 class="text-3xl font-bold text-brand-900" id="val-hearings">-</h3></div>
+                        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm"><p class="text-sm text-gray-500">Balance</p><h3 class="text-3xl font-bold text-brand-600" id="val-balance">-</h3></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-xl border border-gray-200 p-6 lg:col-span-2 shadow-sm">
+                            <h2 class="text-lg font-bold mb-4">Estado de Procesos</h2>
+                            <div class="relative h-72 w-full"><canvas id="statusChart"></canvas></div>
+                        </div>
+                        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+                            <h2 class="text-lg font-bold mb-4">Mis Actividades</h2>
+                            <div id="tasks-container" class="space-y-4">Cargando...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA 2: CLIENTES -->
+            <div id="view-clientes" class="p-4 sm:p-6 lg:p-8 hidden transition-opacity duration-300">
+                <div class="max-w-7xl mx-auto space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div><h1 class="text-2xl font-bold text-gray-900">Directorio de Clientes</h1><p class="text-sm text-gray-500 mt-1">Gestiona la información de personas naturales y jurídicas.</p></div>
+                        <button onclick="openNewClientModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center justify-center"><i class="ph ph-user-plus mr-2 text-lg"></i> Nuevo Cliente</button>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre / Razón Social</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Identificación</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contacto</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th></tr>
+                                </thead>
+                                <tbody id="clients-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA 3: ASUNTOS -->
+            <div id="view-asuntos" class="p-4 sm:p-6 lg:p-8 hidden transition-opacity duration-300">
+                <div class="max-w-7xl mx-auto space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div><h1 class="text-2xl font-bold text-gray-900">Gestión de Asuntos</h1><p class="text-sm text-gray-500 mt-1">Seguimiento de tareas, procesos jurídicos y servicios.</p></div>
+                        <button onclick="openNewAsuntoModal()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center justify-center"><i class="ph ph-plus-circle mr-2 text-lg"></i> Nuevo Asunto</button>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID / Cliente</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Asunto</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Responsable</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado / Plazo</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th></tr>
+                                </thead>
+                                <tbody id="asuntos-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA 4: AGENDA -->
+            <div id="view-agenda" class="p-4 sm:p-6 lg:p-8 hidden transition-opacity duration-300">
+                <div class="max-w-7xl mx-auto space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div><h1 class="text-2xl font-bold text-gray-900">Agenda y Calendario</h1><p class="text-sm text-gray-500 mt-1">Sincronizado con espacios de trabajo. Clic en un evento para editar.</p></div>
+                        <button onclick="openNewAgendaModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center justify-center"><i class="ph ph-calendar-plus mr-2 text-lg"></i> Crear Agenda</button>
+                    </div>
+                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-4 h-[750px] overflow-hidden">
+                        <div id="calendar" class="w-full h-full"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA 5: EQUIPO -->
+            <div id="view-equipo" class="p-4 sm:p-6 lg:p-8 hidden transition-opacity duration-300">
+                <div class="max-w-7xl mx-auto space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div><h1 class="text-2xl font-bold text-gray-900">Equipo de Trabajo</h1><p class="text-sm text-gray-500 mt-1">Administra los asesores y visualiza su carga y rendimiento.</p></div>
+                        <button onclick="openNewEquipoModal()" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center justify-center"><i class="ph ph-user-plus mr-2 text-lg"></i> Nuevo Asesor</button>
+                    </div>
+                    <div class="flex flex-col space-y-4" id="equipo-container"></div>
+                </div>
+            </div>
+
+            <!-- VISTA 6: FINANZAS -->
+            <div id="view-finanzas" class="p-4 sm:p-6 lg:p-8 hidden transition-opacity duration-300">
+                <div class="max-w-7xl mx-auto space-y-6">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div><h1 class="text-2xl font-bold text-gray-900">Módulo Financiero</h1><p class="text-sm text-gray-500 mt-1">Contabilidad interna, centros de costos y gastos generales.</p></div>
+                        <button onclick="openNewGastoGeneralModal()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center justify-center"><i class="ph ph-minus-circle mr-2 text-lg"></i> Registrar Gasto de Oficina</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm"><p class="text-sm text-gray-500 font-medium">Total Recaudado (Abonos)</p><h3 class="text-2xl font-bold text-brand-600 mt-2" id="fin-tot-recaudado">$ 0</h3></div>
+                        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm"><p class="text-sm text-gray-500 font-medium">Total Gastos</p><h3 class="text-2xl font-bold text-gray-600 mt-2" id="fin-tot-gastos">$ 0</h3></div>
+                        <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm border-t-4 border-t-brand-500"><p class="text-sm text-gray-500 font-medium">Utilidad Neta</p><h3 class="text-2xl font-bold text-gray-900 mt-2" id="fin-utilidad">$ 0</h3></div>
+                    </div>
+
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                            <button onclick="toggleFinanzasTab('centros')" id="tab-centros" class="tab-fin-active whitespace-nowrap py-4 px-1 text-sm">Centros de Costos</button>
+                            <button onclick="toggleFinanzasTab('general')" id="tab-general" class="tab-fin-inactive whitespace-nowrap py-4 px-1 text-sm">Gastos Generales</button>
+                        </nav>
+                    </div>
+
+                    <div id="panel-centros" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Centro de Costo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Total</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Abonado / Saldo</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gastos Asociados</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rentabilidad</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th></tr>
+                                </thead>
+                                <tbody id="finanzas-centros-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="panel-general" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fecha</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Concepto</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Beneficiario</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Medio de Pago</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Monto</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acción</th></tr>
+                                </thead>
+                                <tbody id="finanzas-general-body" class="bg-white divide-y divide-gray-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA 7: REPORTES -->
+            <div id="view-reportes" class="p-4 sm:p-6 lg:p-8 hidden transition-opacity duration-300">
+                <div class="max-w-7xl mx-auto space-y-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Reportes y Exportación</h1>
+                        <p class="text-sm text-gray-500 mt-1">Genera documentos PDF consolidados de la información del sistema para impresión o archivo.</p>
+                    </div>
+                    
+                    <!-- BARRA DE FILTROS -->
+                    <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6">
+                        <h3 class="text-sm font-bold text-gray-800 mb-3 flex items-center"><i class="ph ph-funnel mr-2"></i> Filtros de Exportación</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div><label class="block text-xs font-medium text-gray-500 mb-1">Fecha Inicio</label><input type="date" id="rep-fecha-ini" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+                            <div><label class="block text-xs font-medium text-gray-500 mb-1">Fecha Fin</label><input type="date" id="rep-fecha-fin" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"></div>
+                            <div><label class="block text-xs font-medium text-gray-500 mb-1">Estado de Asunto</label><select id="rep-estado-asn" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"><option value="Todos">Todos</option><option value="Pendiente">Pendiente</option><option value="En proceso">En proceso</option><option value="Terminado">Terminado</option></select></div>
+                            <div><label class="block text-xs font-medium text-gray-500 mb-1">Tipo Movimiento</label><select id="rep-tipo-fin" class="w-full border border-gray-300 rounded-lg p-2 text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"><option value="Todos">Ingresos y Gastos</option><option value="Ingresos">Solo Ingresos (Abonos)</option><option value="Gastos">Solo Gastos</option></select></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                            <i class="ph ph-users text-5xl text-brand-600 mb-4"></i>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Directorio de Clientes</h3>
+                            <p class="text-sm text-gray-500 mb-6 flex-1">Listado completo de todos los clientes registrados, incluyendo sus datos de contacto e identificación.</p>
+                            <button onclick="generarReportePDF('clientes')" class="w-full bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-900 flex justify-center items-center">
+                                <i class="ph ph-download-simple mr-2 text-lg"></i> Descargar PDF
+                            </button>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                            <i class="ph ph-briefcase text-5xl text-brand-600 mb-4"></i>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Estado de Asuntos</h3>
+                            <p class="text-sm text-gray-500 mb-6 flex-1">Reporte detallado de los asuntos, filtrado por fechas y estado del proceso.</p>
+                            <button onclick="generarReportePDF('asuntos')" class="w-full bg-gray-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-900 flex justify-center items-center">
+                                <i class="ph ph-download-simple mr-2 text-lg"></i> Descargar PDF
+                            </button>
+                        </div>
+
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow">
+                            <i class="ph ph-chart-line-up text-5xl text-brand-600 mb-4"></i>
+                            <h3 class="text-lg font-bold text-gray-900 mb-2">Balance Financiero</h3>
+                            <p class="text-sm text-gray-500 mb-6 flex-1">Consolidado general de ingresos y egresos de la firma, aplicando los filtros de fecha y tipo seleccionados.</p>
+                            <button onclick="generarReportePDF('finanzas')" class="w-full bg-brand-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-700 flex justify-center items-center">
+                                <i class="ph ph-download-simple mr-2 text-lg"></i> Descargar PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- ==========================================
+         ZONA DE MODALES
+         ========================================== -->
+    <!-- Modal NUEVO/EDITAR CLIENTE -->
+    <div id="cliente-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeModal('cliente-modal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="relative bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 max-w-3xl w-full">
+                <div class="bg-white px-6 pt-5 pb-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-5 border-b pb-3 border-gray-100">
+                        <h3 class="text-xl font-bold text-gray-900 flex items-center" id="cli-modal-title"><i class="ph ph-user-circle text-brand-600 mr-2 text-2xl"></i> Registro de Nuevo Cliente</h3>
+                        <button type="button" onclick="closeModal('cliente-modal')" class="text-gray-400 hover:text-gray-500"><i class="ph ph-x text-xl"></i></button>
+                    </div>
+                    <form id="form-cliente" onsubmit="submitCliente(event)">
+                        <input type="hidden" id="cli-action" value="create">
+                        <div class="mb-4 bg-brand-50 p-3 rounded-lg border border-brand-100 flex items-center justify-between"><span class="text-sm text-brand-900 font-medium">ID Consecutivo:</span><input type="text" id="cli-id" readonly class="bg-transparent text-brand-600 font-bold text-right outline-none w-32"></div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Naturaleza Jurídica *</label><select id="cli-naturaleza" required onchange="toggleJuridicaFields()" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"><option value="Natural">Persona Natural</option><option value="Jurídica">Persona Jurídica</option></select></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Identificación *</label><select id="cli-tipo-doc" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"><option value="CC">CC</option><option value="CE">CE</option><option value="NIT">NIT</option><option value="Pasaporte">Pasaporte</option></select></div>
+                            <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Nombre / Razón Social *</label><input type="text" id="cli-nombre" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">No. Identificación *</label><input type="text" id="cli-num-doc" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Teléfono *</label><input type="tel" id="cli-telefono" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico *</label><input type="email" id="cli-correo" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 p-3 rounded border border-gray-200">
+                                <div class="md:col-span-3 text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Ubicación</div>
+                                <div class="md:col-span-3"><label class="block text-sm font-medium text-gray-700 mb-1">Dirección</label><input type="text" id="cli-direccion" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                                <div class="md:col-span-1"><label class="block text-sm font-medium text-gray-700 mb-1">Departamento</label><input type="text" id="cli-departamento" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                                <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Municipio</label><input type="text" id="cli-municipio" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            </div>
+                            <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 hidden bg-gray-50 p-3 rounded border border-gray-200" id="juridica-fields">
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Representante Legal</label><input type="text" id="cli-replegal" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Persona de Contacto</label><input type="text" id="cli-contacto" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            </div>
+                            <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Enlace a Carpeta Drive</label><input type="url" id="cli-drive" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm" placeholder="https://drive.google.com/..."></div>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-100">
+                            <button type="button" onclick="closeModal('cliente-modal')" class="bg-white border border-gray-300 rounded-md py-2 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
+                            <button type="submit" id="btn-submit-cli" class="bg-brand-600 text-white rounded-md py-2 px-4 text-sm font-medium hover:bg-brand-700">Guardar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal DETALLES DEL CLIENTE -->
+    <div id="detalles-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeModal('detalles-modal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div><h3 class="text-xl font-bold text-gray-900" id="det-nombre">-</h3><p class="text-sm text-gray-500 flex items-center mt-1"><i class="ph ph-identification-card mr-1"></i> <span id="det-id-completo">-</span></p></div>
+                    <button onclick="closeModal('detalles-modal')" class="text-gray-400 hover:text-gray-500"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <div class="grid grid-cols-2 gap-4 text-sm border-t border-gray-100 pt-4">
+                    <div><span class="block text-gray-500 text-xs uppercase tracking-wider">ID Sistema</span><span class="font-medium text-gray-900" id="det-codigo">-</span></div>
+                    <div><span class="block text-gray-500 text-xs uppercase tracking-wider">Naturaleza</span><span class="font-medium text-gray-900" id="det-naturaleza">-</span></div>
+                    <div><span class="block text-gray-500 text-xs uppercase tracking-wider">Teléfono</span><span class="font-medium text-gray-900" id="det-telefono">-</span></div>
+                    <div><span class="block text-gray-500 text-xs uppercase tracking-wider">Correo</span><span class="font-medium text-brand-600 block break-all" id="det-correo">-</span></div>
+                </div>
+                
+                <!-- BOTÓN DE DRIVE DESTACADO -->
+                <div class="mt-4 bg-brand-50 p-3 rounded-lg border border-brand-200 hidden" id="det-cli-drive-container">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="ph ph-google-drive-logo text-3xl text-brand-600 mr-3"></i>
+                            <div>
+                                <span class="block text-brand-900 font-bold text-sm">Carpeta del Cliente</span>
+                                <span class="block text-brand-600 text-xs">Google Drive</span>
+                            </div>
+                        </div>
+                        <a href="#" id="det-cli-drive-link" target="_blank" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center transition-colors">
+                            <i class="ph ph-folder-open mr-2 text-lg"></i> Abrir
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-between items-center pt-4 border-t border-gray-100">
+                    <button type="button" onclick="promptDeleteCliente()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                        <i class="ph ph-trash mr-1"></i> Eliminar
+                    </button>
+                    <div class="flex space-x-3 ml-auto">
+                        <button class="bg-brand-600 text-white border border-transparent rounded-md shadow-sm py-2 px-4 text-sm font-medium hover:bg-brand-700 flex items-center" onclick="editCurrentClient()">
+                            <i class="ph ph-pencil-simple mr-2"></i> Editar
+                        </button>
+                        <button class="bg-white border border-gray-300 rounded-md shadow-sm py-2 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center" onclick="closeModal('detalles-modal')">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal NUEVO/EDITAR ASUNTO -->
+    <div id="asunto-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeModal('asunto-modal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="relative bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 max-w-3xl w-full">
+                <div class="bg-white px-6 pt-5 pb-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-5 border-b pb-3 border-gray-100">
+                        <h3 class="text-xl font-bold text-gray-900 flex items-center" id="asn-modal-title"><i class="ph ph-briefcase mr-2 text-2xl"></i> Registro de Nuevo Asunto</h3>
+                        <button type="button" onclick="closeModal('asunto-modal')" class="text-gray-400 hover:text-gray-500"><i class="ph ph-x text-xl"></i></button>
+                    </div>
+                    <form id="form-asunto" onsubmit="submitAsunto(event)">
+                        <input type="hidden" id="asn-action" value="create">
+                        <input type="hidden" id="asn-id" value="">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Cliente *</label><select id="asn-cliente" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm bg-gray-50"></select></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Tipo de Asunto *</label><select id="asn-tipo" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"><option value="Jurídico">Jurídico</option><option value="Contable">Contable</option><option value="Técnico">Técnico</option></select></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Estado Inicial *</label><select id="asn-estado" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"><option value="Pendiente">Pendiente</option><option value="En proceso">En proceso</option><option value="Terminado">Terminado</option></select></div>
+                            <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Actividad / Tarea *</label><textarea id="asn-actividad" required rows="2" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></textarea></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Solicitud *</label><input type="date" id="asn-fecha-sol" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Fecha de Vencimiento *</label><input type="date" id="asn-fecha-venc" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Responsable (Asesor) *</label><select id="asn-responsable" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></select></div>
+                            <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Enlace a Carpeta Drive</label><input type="url" id="asn-drive" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            
+                            <!-- Honorarios, Forma de Pago y QUIEN RECIBE -->
+                            <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 bg-brand-50 p-3 rounded border border-brand-100 mt-2">
+                                <div class="md:col-span-3 text-xs font-bold text-brand-700 uppercase tracking-wider mb-1">Honorarios y Pagos</div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Valor Total (COP) *</label><input type="number" id="asn-valor" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Forma de Pago *</label><select id="asn-pago" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"><option value="Anticipo 50%">Anticipo 50%</option><option value="Mensualidad">Mensualidad</option><option value="Pago Total">Pago Total</option></select></div>
+                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Quién Recibe *</label><select id="asn-recibe" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></select></div>
+                            </div>
+                            
+                            <div class="md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Prioridad</label><select id="asn-prioridad" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"><option value="Normal">Normal</option><option value="Alta">Alta</option></select></div>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-3 pt-4 border-t border-gray-100">
+                            <button type="button" onclick="closeModal('asunto-modal')" class="bg-white border border-gray-300 rounded-md py-2 px-4 text-sm font-medium text-gray-700">Cancelar</button>
+                            <button type="submit" id="btn-submit-asn" class="bg-gray-900 text-white rounded-md py-2 px-4 text-sm font-medium">Guardar Asunto</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal DETALLES ASUNTO -->
+    <div id="detalles-asunto-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeModal('detalles-asunto-modal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <div><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" id="det-asn-estado">-</span><h3 class="text-xl font-bold text-gray-900 mt-2" id="det-asn-id">-</h3><p class="text-sm text-gray-500 font-medium mt-1" id="det-asn-cliente-nombre">-</p></div>
+                    <button onclick="closeModal('detalles-asunto-modal')" class="text-gray-400 hover:text-gray-500"><i class="ph ph-x text-xl"></i></button>
+                </div>
+                <div class="space-y-4 border-t border-gray-100 pt-4">
+                    <div class="bg-gray-50 p-3 rounded-lg border border-gray-200"><span class="block text-gray-500 text-xs uppercase mb-1">Actividad (<span id="det-asn-tipo"></span>)</span><p class="text-sm text-gray-900 font-medium" id="det-asn-actividad">-</p></div>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div><span class="block text-gray-500 text-xs uppercase tracking-wider">Responsable</span><span class="font-medium text-gray-900" id="det-asn-responsable">-</span></div>
+                        <div><span class="block text-gray-500 text-xs uppercase tracking-wider">Vencimiento</span><span class="font-medium text-gray-600" id="det-asn-vencimiento">-</span></div>
+                        <div><span class="block text-gray-500 text-xs uppercase tracking-wider">Valor</span><span class="font-medium text-brand-600" id="det-asn-valor">-</span></div>
+                        <div><span class="block text-gray-500 text-xs uppercase tracking-wider">Pago / Recibe</span><span class="font-medium text-gray-900" id="det-asn-pago">-</span></div>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between bg-brand-50 p-3 rounded-lg border border-brand-100 hidden" id="det-asn-drive-container">
+                        <div><span class="block text-brand-700 text-xs font-bold uppercase"><i class="ph ph-folder-open mr-1"></i> Drive</span></div>
+                        <a href="#" id="det-asn-drive-link" target="_blank" class="bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 rounded text-sm font-medium">Abrir Drive</a>
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-between items-center pt-4 border-t border-gray-100">
+                    <button type="button" onclick="promptDeleteAsunto()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center">
+                        <i class="ph ph-trash mr-1"></i> Eliminar
+                    </button>
+                    <div class="flex space-x-3 ml-auto">
+                        <button class="bg-brand-600 text-white rounded-md py-2 px-4 text-sm font-medium" onclick="openDetallesFinanzas(document.getElementById('det-asn-id').textContent); closeModal('detalles-asunto-modal'); switchView('finanzas');"><i class="ph ph-currency-circle-dollar mr-1"></i> Finanzas</button>
+                        <button class="bg-gray-800 hover:bg-gray-900 text-white rounded-md py-2 px-4 text-sm font-medium flex items-center" onclick="editCurrentAsunto()">
+                            <i class="ph ph-pencil-simple mr-2"></i> Editar
+                        </button>
+                        <button class="bg-white border border-gray-300 rounded-md py-2 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50" onclick="closeModal('detalles-asunto-modal')">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal CREAR/EDITAR AGENDA -->
+    <div id="agenda-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onclick="closeModal('agenda-modal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+                <h3 class="text-xl font-bold border-b pb-3 mb-4" id="ag-modal-title"><i class="ph ph-calendar-plus mr-2 text-brand-600"></i> Agendar</h3>
+                <form id="form-agenda" onsubmit="submitAgenda(event)">
+                    <input type="hidden" id="ag-action" value="create">
+                    <input type="hidden" id="ag-id" value="">
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Título de la cita *</label><input type="text" id="ag-asunto" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Cliente *</label><select id="ag-cliente" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></select></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Vincular Asunto *</label><select id="ag-asunto-id" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></select></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Responsable *</label><select id="ag-responsable" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></select></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Fecha *</label><input type="date" id="ag-fecha" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Hora *</label><input type="time" id="ag-hora" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Duración (Horas) *</label><select id="ag-duracion" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option></select></div>
+                        
+                        <div class="bg-brand-50 p-3 rounded-lg border border-brand-100">
+                            <div class="flex items-center">
+                                <input id="ag-honorarios" type="checkbox" onchange="document.getElementById('ag-valor-container').classList.toggle('hidden', !this.checked)" class="h-4 w-4 text-brand-600 rounded cursor-pointer">
+                                <label class="ml-2 block text-sm font-bold text-brand-800">Genera honorarios / Cobro extra</label>
+                            </div>
+                            <div id="ag-valor-container" class="hidden mt-3">
+                                <label class="block text-xs font-medium text-gray-700 mb-1">Valor a sumar al Asunto (COP) *</label>
+                                <input type="number" id="ag-valor-honorarios" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm" placeholder="Ej. 150000">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex justify-between items-center pt-4 border-t border-gray-100">
+                        <!-- Botón de Eliminar (Oculto al crear, visible al editar) -->
+                        <button type="button" id="btn-delete-ag" onclick="promptDeleteAgenda()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-md text-sm font-medium hidden transition-colors flex items-center">
+                            <i class="ph ph-trash mr-1"></i> Eliminar
+                        </button>
+                        
+                        <div class="flex space-x-3 ml-auto">
+                            <button type="button" onclick="closeModal('agenda-modal')" class="bg-gray-100 px-4 py-2 rounded-md text-sm font-medium text-gray-700">Cancelar</button>
+                            <button type="submit" id="btn-submit-ag" class="bg-brand-600 text-white px-4 py-2 rounded-md text-sm font-medium">Guardar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal EQUIPO -->
+    <div id="equipo-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onclick="closeModal('equipo-modal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
+                <h3 class="text-xl font-bold border-b pb-3 mb-4" id="eq-modal-title">Asesor</h3>
+                <form id="form-equipo" onsubmit="submitEquipo(event)">
+                    <input type="hidden" id="eq-action" value="create"><input type="hidden" id="eq-id" value="">
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Nombre *</label><input type="text" id="eq-nombre" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Rol *</label><select id="eq-rol" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"><option value="Socio">Socio</option><option value="Asesor Senior">Asesor Senior</option><option value="Asesor Junior">Asesor Junior</option><option value="Paralegal">Paralegal</option></select></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label><input type="tel" id="eq-telefono" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Correo</label><input type="email" id="eq-correo" required class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                        </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">URL Foto</label><input type="url" id="eq-foto" class="w-full border border-gray-300 rounded-md py-2 px-3 sm:text-sm"></div>
+                    </div>
+                    <div class="mt-6 flex justify-end space-x-3">
+                        <button type="button" onclick="closeModal('equipo-modal')" class="bg-gray-100 px-4 py-2 rounded-md text-sm font-medium text-gray-700">Cancelar</button>
+                        <button type="submit" id="btn-submit-eq" class="bg-brand-600 text-white px-4 py-2 rounded-md text-sm font-medium">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales Finanzas simplificados para la vista (Mantiene IDs) -->
+    <div id="detalles-finanzas-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onclick="closeModal('detalles-finanzas-modal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 py-8">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
+                <div class="p-6 border-b flex justify-between"><div class="flex-1"><h3 class="text-2xl font-bold" id="det-fin-id">-</h3><p id="det-fin-cliente" class="text-sm text-gray-600">-</p></div><button onclick="closeModal('detalles-finanzas-modal')"><i class="ph ph-x text-2xl"></i></button></div>
+                <div class="flex-1 overflow-y-auto p-6 bg-gray-50">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-white p-4 rounded border shadow-sm"><p class="text-xs text-gray-500 uppercase">Valor</p><p class="text-lg font-bold" id="det-fin-valor">$0</p></div>
+                        <div class="bg-white p-4 rounded border shadow-sm"><p class="text-xs text-gray-500 uppercase">Abonado</p><p class="text-lg font-bold text-brand-600" id="det-fin-abonado">$0</p><p class="text-xs text-gray-400 mt-1" id="det-fin-saldo">-</p></div>
+                        <div class="bg-white p-4 rounded border shadow-sm"><p class="text-xs text-gray-500 uppercase">Gastos</p><p class="text-lg font-bold text-gray-600" id="det-fin-gastos">$0</p></div>
+                        <div class="bg-brand-50 p-4 rounded border shadow-sm border-brand-200"><p class="text-xs text-brand-700 uppercase">Rentabilidad</p><p class="text-lg font-bold text-brand-700" id="det-fin-rentabilidad">$0</p></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white rounded border overflow-hidden"><div class="p-3 bg-gray-50 border-b flex justify-between"><b>Abonos</b><button onclick="openAbonoModal()" class="text-xs bg-brand-600 text-white px-2 py-1 rounded">Registrar</button></div><table class="w-full text-sm"><tbody id="det-abonos-body"></tbody></table></div>
+                        <div class="bg-white rounded border overflow-hidden"><div class="p-3 bg-gray-50 border-b flex justify-between"><b>Gastos</b><button onclick="openGastoModal(true)" class="text-xs bg-gray-800 text-white px-2 py-1 rounded">Registrar</button></div><table class="w-full text-sm"><tbody id="det-gastos-body"></tbody></table></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ABONO Y GASTO MODALES -->
+    <div id="abono-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onclick="closeModal('abono-modal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="relative bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-bold border-b pb-3 mb-4" id="ab-modal-title">Registrar Abono</h3>
+                <form onsubmit="submitAbono(event)">
+                    <input type="hidden" id="ab-action" value="create">
+                    <input type="hidden" id="ab-id" value="">
+                    <input type="hidden" id="ab-idasunto">
+                    <div class="space-y-4">
+                        <div><label class="text-sm">Fecha</label><input type="date" id="ab-fecha" required class="w-full border rounded p-2 sm:text-sm"></div>
+                        <div><label class="text-sm">Monto</label><input type="number" id="ab-monto" required class="w-full border rounded p-2 sm:text-sm"></div>
+                        <div><label class="text-sm">Recibe</label><input type="text" id="ab-recibe" required class="w-full border rounded p-2 sm:text-sm"></div>
+                        <div><label class="text-sm">Medio</label><select id="ab-medio" required class="w-full border rounded p-2 sm:text-sm"><option>Transferencia Bancaria</option><option>Efectivo</option></select></div>
+                    </div>
+                    <div class="mt-6 flex justify-between items-center pt-4 border-t border-gray-100">
+                        <button type="button" id="btn-delete-ab" onclick="promptDeleteAbono()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-md text-sm font-medium hidden transition-colors flex items-center"><i class="ph ph-trash mr-1"></i> Eliminar</button>
+                        <div class="flex justify-end gap-2 ml-auto">
+                            <button type="button" onclick="closeModal('abono-modal')" class="px-4 py-2 bg-gray-100 rounded text-sm">Cancelar</button>
+                            <button type="submit" name="action" value="guardar" class="px-4 py-2 bg-brand-600 text-white rounded text-sm">Guardar</button>
+                            <button type="submit" name="action" value="generar" class="px-4 py-2 bg-gray-800 text-white rounded text-sm flex"><i class="ph ph-printer mr-1"></i> PDF</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="gasto-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onclick="closeModal('gasto-modal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="relative bg-white rounded-xl shadow-2xl p-6 w-full max-w-md">
+                <h3 class="text-lg font-bold border-b pb-3 mb-4" id="ga-modal-title">Registrar Gasto</h3>
+                <form onsubmit="submitGasto(event)">
+                    <input type="hidden" id="ga-action" value="create">
+                    <input type="hidden" id="ga-id" value="">
+                    <input type="hidden" id="ga-idasunto">
+                    <div class="space-y-4">
+                        <div class="flex gap-2"><div class="flex-1"><label class="text-sm">Fecha</label><input type="date" id="ga-fecha" required class="w-full border rounded p-2 sm:text-sm"></div><div class="flex-1"><label class="text-sm">Monto</label><input type="number" id="ga-monto" required class="w-full border rounded p-2 sm:text-sm"></div></div>
+                        <div><label class="text-sm">Beneficiario</label><input type="text" id="ga-beneficiario" required class="w-full border rounded p-2 sm:text-sm"></div>
+                        <div class="flex gap-2"><div class="flex-1"><label class="text-sm">ID Beneficiario</label><input type="text" id="ga-idbeneficiario" required class="w-full border rounded p-2 sm:text-sm"></div><div class="flex-1"><label class="text-sm">Medio</label><select id="ga-medio" class="w-full border rounded p-2 sm:text-sm"><option>Efectivo</option><option>Transferencia Bancaria</option></select></div></div>
+                        <div><label class="text-sm">Concepto</label><input type="text" id="ga-concepto" required class="w-full border rounded p-2 sm:text-sm"></div>
+                    </div>
+                    <div class="mt-6 flex justify-between items-center pt-4 border-t border-gray-100">
+                        <button type="button" id="btn-delete-ga" onclick="promptDeleteGasto()" class="bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-md text-sm font-medium hidden transition-colors flex items-center"><i class="ph ph-trash mr-1"></i> Eliminar</button>
+                        <div class="flex justify-end gap-2 ml-auto">
+                            <button type="button" onclick="closeModal('gasto-modal')" class="px-4 py-2 bg-gray-100 rounded text-sm">Cancelar</button>
+                            <button type="submit" name="action" value="guardar" class="px-4 py-2 bg-brand-600 text-white rounded text-sm">Guardar</button>
+                            <button type="submit" name="action" value="generar" class="px-4 py-2 bg-gray-800 text-white rounded text-sm flex"><i class="ph ph-printer mr-1"></i> PDF</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal CONFIRMACIÓN GENERAL -->
+    <div id="confirm-modal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" onclick="closeConfirmModal()"></div>
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-sm p-6 text-center transform transition-all">
+                <div class="mx-auto flex items-center justify-center h-14 w-14 rounded-full bg-red-100 mb-4">
+                    <i class="ph ph-warning text-3xl text-red-600"></i>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-2" id="confirm-title">Confirmar Acción</h3>
+                <p class="text-sm text-gray-500 mb-6" id="confirm-message">¿Estás seguro?</p>
+                <div class="flex justify-center space-x-3">
+                    <button type="button" onclick="closeConfirmModal()" class="bg-white border border-gray-300 rounded-lg py-2 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 flex-1 transition-colors">Cancelar</button>
+                    <button type="button" id="btn-confirm-action" onclick="if(confirmActionCallback) confirmActionCallback(); closeConfirmModal();" class="bg-red-600 hover:bg-red-700 text-white rounded-lg py-2 px-4 text-sm font-medium flex-1 shadow-sm transition-colors">Sí, eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Toasts -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-3"></div>
+
+    <!-- ==========================================
+         JAVASCRIPT: API REST Y LÓGICA
+         ========================================== -->
+    <script>
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz_5pa2JJSON7cdizSBvLwYeeRRd3e0w4Z7atz535lg10HEmXfSj_A_cY9bxupmnCdfMw/exec'; 
+
+        // Variables Globales
+        let myChart = null;
+        let globalClientsCount = 0;
+        let globalAsuntosCount = 0;
+        let appData = { clients: [], asuntos: [], agenda: [], equipo: [], abonos: [], gastos: [] }; 
+        let calendar = null;
+        let currentCostCenterId = null;
+        let currentClient = null;
+        let currentAsunto = null;
+
+        // Iniciar
+        document.addEventListener('DOMContentLoaded', () => loadDashboardData());
+
+        // Función Puente (API FETCH)
+        async function fetchAPI(action, data = null) {
+            if (!SCRIPT_URL) return simulateBackendResponse(action, data);
+            try {
+                if (!data) {
+                    const res = await fetch(`${SCRIPT_URL}?action=${action}`);
+                    return await res.json();
+                } else {
+                    const res = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: action, data: data })
+                    });
+                    return await res.json();
+                }
+            } catch (err) {
+                console.error("Fetch Error:", err);
+                return { success: false, message: "Error de red: " + err.message };
+            }
+        }
+
+        // ==========================================
+        // FUNCIONES DE CONTROL PRINCIPAL
+        // ==========================================
+        async function loadDashboardData() {
+            if(!SCRIPT_URL) {
+                document.getElementById('conn-status').classList.remove('hidden');
+                document.getElementById('conn-status').classList.add('flex');
+            }
+            document.getElementById('api-loader').classList.remove('hidden');
+
+            const res = await fetchAPI('getDashboardData');
+            document.getElementById('api-loader').classList.add('hidden');
+
+            if (res && res.success !== false) {
+                appData = res;
+                globalClientsCount = appData.clients ? appData.clients.length : 0;
+                globalAsuntosCount = appData.asuntos ? appData.asuntos.length : 0;
+                
+                renderDashboard(appData);
+                renderClientsTable(appData.clients);
+                renderAsuntosTable(appData.asuntos);
+                renderEquipo(appData.equipo);
+                initCalendar(appData.agenda);
+                renderFinanzas();
+                updateNotifications();
+                
+                // Iniciar Sincronización Silenciosa cada 60 segundos
+                setInterval(loadDashboardDataSilently, 60000);
+            } else {
+                showToast(res.error || res.message || "Error al conectar con la base de datos.", "error");
+            }
+        }
+
+        async function loadDashboardDataSilently() {
+            if(!SCRIPT_URL) return; // Evitar requests si no hay URL
+            
+            const syncIcon = document.getElementById('sync-status');
+            if(syncIcon) { syncIcon.classList.remove('hidden'); syncIcon.classList.add('flex'); }
+            
+            const res = await fetchAPI('getDashboardData');
+            
+            if(syncIcon) syncIcon.classList.add('hidden');
+
+            if (res && res.success !== false) {
+                appData = res;
+                globalClientsCount = appData.clients ? appData.clients.length : 0;
+                globalAsuntosCount = appData.asuntos ? appData.asuntos.length : 0;
+                
+                renderDashboard(appData);
+                renderClientsTable(appData.clients);
+                renderAsuntosTable(appData.asuntos);
+                renderEquipo(appData.equipo);
+                
+                if(calendar) {
+                    const events = (appData.agenda || []).map(item => ({ id: item.id, title: `${item.asunto}\n${item.cliente.split(' ')[0]}`, start: item.start, end: item.end, backgroundColor: item.responsable && item.responsable.toUpperCase().includes('JULIO') ? '#2b4c80' : '#a855f7', borderColor: item.responsable && item.responsable.toUpperCase().includes('JULIO') ? '#2b4c80' : '#a855f7', textColor: '#ffffff' }));
+                    calendar.removeAllEvents();
+                    calendar.addEventSource(events);
+                }
+                renderFinanzas();
+                updateNotifications();
+            }
+        }
+
+        function updateNotifications() {
+            const now = new Date();
+            const tomorrow = new Date(now);
+            tomorrow.setDate(tomorrow.getDate() + 3); // Mirar 3 días a futuro
+            
+            const upcoming = (appData.agenda || []).filter(ag => {
+                const agDate = new Date(ag.start);
+                return agDate >= now && agDate <= tomorrow;
+            }).sort((a,b) => new Date(a.start) - new Date(b.start));
+
+            const badge = document.getElementById('notif-badge');
+            const list = document.getElementById('notif-list');
+            
+            if(upcoming.length > 0) {
+                badge.textContent = upcoming.length;
+                badge.classList.remove('hidden');
+                list.innerHTML = upcoming.map(ag => `
+                    <div class="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer" onclick="switchView('agenda'); toggleNotifications();">
+                        <p class="text-sm font-bold text-brand-700">${ag.asunto}</p>
+                        <p class="text-xs text-gray-600 flex items-center mt-1"><i class="ph ph-clock mr-1"></i> ${new Date(ag.start).toLocaleString('es-CO', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'})}</p>
+                        <p class="text-[10px] text-gray-500 mt-1 uppercase font-bold"><i class="ph ph-user mr-1"></i> ${ag.responsable}</p>
+                    </div>
+                `).join('');
+            } else {
+                badge.classList.add('hidden');
+                list.innerHTML = '<div class="p-6 text-center text-sm text-gray-500"><i class="ph ph-check-circle text-3xl text-gray-300 block mb-2"></i>No hay eventos próximos</div>';
+            }
+        }
+
+        function toggleNotifications() {
+            document.getElementById('notif-dropdown').classList.toggle('hidden');
+        }
+
+        // ==========================================
+        // MÓDULO CLIENTES
+        // ==========================================
+        function openNewClientModal() { 
+            globalClientsCount++; 
+            document.getElementById('cli-action').value = 'create';
+            document.getElementById('cli-modal-title').innerHTML = '<i class="ph ph-user-circle text-brand-600 mr-2 text-2xl"></i> Registro de Nuevo Cliente';
+            document.getElementById('cli-id').value = `2026-LP-${String(globalClientsCount).padStart(4, '0')}`; 
+            openModal('cliente-modal'); 
+        }
+
+        function editCurrentClient() {
+            closeModal('detalles-modal');
+            if(!currentClient) return;
+            document.getElementById('cli-action').value = 'edit';
+            document.getElementById('cli-modal-title').innerHTML = '<i class="ph ph-pencil-simple text-brand-600 mr-2 text-2xl"></i> Editar Cliente';
+            document.getElementById('cli-id').value = currentClient.id;
+            document.getElementById('cli-naturaleza').value = currentClient.type;
+            toggleJuridicaFields();
+            document.getElementById('cli-tipo-doc').value = currentClient.docType;
+            document.getElementById('cli-nombre').value = currentClient.name;
+            document.getElementById('cli-num-doc').value = currentClient.docNum;
+            document.getElementById('cli-telefono').value = currentClient.phone;
+            document.getElementById('cli-correo').value = currentClient.email;
+            document.getElementById('cli-direccion').value = currentClient.dir || '';
+            document.getElementById('cli-municipio').value = currentClient.mun || '';
+            document.getElementById('cli-departamento').value = currentClient.dep || '';
+            document.getElementById('cli-drive').value = currentClient.drive || '';
+            openModal('cliente-modal');
+        }
+
+        async function submitCliente(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-cli');
+            const ogText = btn.innerHTML; btn.innerHTML = 'Guardando...'; btn.disabled = true;
+            
+            const actionType = document.getElementById('cli-action').value;
+            const data = {
+                id: document.getElementById('cli-id').value, name: document.getElementById('cli-nombre').value, type: document.getElementById('cli-naturaleza').value, docType: document.getElementById('cli-tipo-doc').value, docNum: document.getElementById('cli-num-doc').value, phone: document.getElementById('cli-telefono').value, email: document.getElementById('cli-correo').value, dir: document.getElementById('cli-direccion').value, mun: document.getElementById('cli-municipio').value, dep: document.getElementById('cli-departamento').value, drive: document.getElementById('cli-drive').value
+            };
+
+            const apiEndpoint = actionType === 'create' ? 'createCliente' : 'updateCliente';
+            const res = await fetchAPI(apiEndpoint, data);
+            
+            btn.innerHTML = ogText; btn.disabled = false;
+            closeModal('cliente-modal');
+            
+            if(res && res.success) { 
+                showToast(actionType === 'create' ? "Cliente guardado" : "Cliente actualizado"); 
+                if(actionType === 'create') { appData.clients.push(data); }
+                else { const idx = appData.clients.findIndex(c => c.id === data.id); if(idx !== -1) appData.clients[idx] = data; }
+                renderClientsTable(appData.clients); 
+            } else { showToast(res.message || "Error al guardar", "error"); }
+        }
+
+        // ==========================================
+        // MÓDULO ASUNTOS
+        // ==========================================
+        function openNewAsuntoModal() { 
+            document.getElementById('asn-action').value = 'create';
+            document.getElementById('asn-modal-title').innerHTML = '<i class="ph ph-briefcase text-brand-600 mr-2 text-2xl"></i> Registro de Nuevo Asunto';
+            document.getElementById('asn-cliente').innerHTML = appData.clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join(''); 
+            document.getElementById('asn-responsable').innerHTML = appData.equipo.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join(''); 
+            
+            // Llenar listado de Quién Recibe
+            document.getElementById('asn-recibe').innerHTML = appData.equipo.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join(''); 
+
+            openModal('asunto-modal'); 
+        }
+
+        function editCurrentAsunto() {
+            closeModal('detalles-asunto-modal');
+            if(!currentAsunto) return;
+            document.getElementById('asn-action').value = 'edit';
+            document.getElementById('asn-id').value = currentAsunto.id;
+            document.getElementById('asn-modal-title').innerHTML = '<i class="ph ph-pencil-simple text-brand-600 mr-2 text-2xl"></i> Editar Asunto';
+            
+            document.getElementById('asn-cliente').innerHTML = appData.clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+            document.getElementById('asn-cliente').value = currentAsunto.idCliente;
+            document.getElementById('asn-tipo').value = currentAsunto.tipo;
+            document.getElementById('asn-estado').value = currentAsunto.estado;
+            document.getElementById('asn-actividad').value = currentAsunto.actividad;
+            document.getElementById('asn-fecha-sol').value = currentAsunto.fechaSol;
+            document.getElementById('asn-fecha-venc').value = currentAsunto.fechaVenc;
+            
+            document.getElementById('asn-responsable').innerHTML = appData.equipo.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('');
+            document.getElementById('asn-responsable').value = currentAsunto.responsable;
+            
+            document.getElementById('asn-drive').value = currentAsunto.drive || '';
+            document.getElementById('asn-valor').value = currentAsunto.valor;
+            document.getElementById('asn-pago').value = currentAsunto.pago;
+            
+            document.getElementById('asn-recibe').innerHTML = appData.equipo.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('');
+            document.getElementById('asn-recibe').value = currentAsunto.quienRecibe || '';
+
+            document.getElementById('asn-prioridad').value = currentAsunto.prioridad || 'Normal';
+            openModal('asunto-modal');
+        }
+
+        async function submitAsunto(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-asn');
+            const ogText = btn.innerHTML; btn.innerHTML = 'Guardando...'; btn.disabled = true;
+            
+            const actionType = document.getElementById('asn-action').value;
+            if(actionType === 'create') globalAsuntosCount++;
+
+            const data = {
+                id: actionType === 'create' ? `AS-${String(globalAsuntosCount).padStart(4, '0')}` : document.getElementById('asn-id').value, 
+                idCliente: document.getElementById('asn-cliente').value, tipo: document.getElementById('asn-tipo').value, estado: document.getElementById('asn-estado').value, actividad: document.getElementById('asn-actividad').value, fechaSol: document.getElementById('asn-fecha-sol').value, fechaVenc: document.getElementById('asn-fecha-venc').value, responsable: document.getElementById('asn-responsable').value, valor: document.getElementById('asn-valor').value, pago: document.getElementById('asn-pago').value, quienRecibe: document.getElementById('asn-recibe').value, prioridad: document.getElementById('asn-prioridad').value, drive: document.getElementById('asn-drive').value
+            };
+
+            const apiEndpoint = actionType === 'create' ? 'createAsunto' : 'updateAsunto';
+            const res = await fetchAPI(apiEndpoint, data);
+            
+            btn.innerHTML = ogText; btn.disabled = false;
+            closeModal('asunto-modal');
+
+            if(res && res.success) { 
+                showToast(actionType === 'create' ? "Asunto registrado" : "Asunto actualizado"); 
+                if(actionType === 'create') { appData.asuntos.unshift(data); }
+                else { const idx = appData.asuntos.findIndex(a => a.id === data.id); if(idx !== -1) appData.asuntos[idx] = data; }
+                renderAsuntosTable(appData.asuntos); renderEquipo(appData.equipo); renderFinanzas();
+            } else { showToast(res.message || "Error al guardar", "error"); }
+        }
+
+        // ==========================================
+        // MÓDULO AGENDA
+        // ==========================================
+        function initCalendar(agendaData) {
+            const events = (agendaData || []).map(item => ({ id: item.id, title: `${item.asunto}\n${item.cliente.split(' ')[0]}`, start: item.start, end: item.end, backgroundColor: item.responsable && item.responsable.toUpperCase().includes('JULIO') ? '#2b4c80' : '#a855f7', borderColor: item.responsable && item.responsable.toUpperCase().includes('JULIO') ? '#2b4c80' : '#a855f7', textColor: '#ffffff' }));
+            const calEl = document.getElementById('calendar');
+            if(calendar) { calendar.destroy(); }
+            calendar = new FullCalendar.Calendar(calEl, { 
+                initialView: 'timeGridWeek', 
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+                buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', day: 'Día', list: 'Agenda' },
+                locale: 'es', slotMinTime: '07:00:00', slotMaxTime: '21:00:00', allDaySlot: false, hiddenDays: [0], 
+                events: events,
+                eventClick: function(info) { editAgenda(info.event.id); }
+            });
+            calendar.render();
+        }
+
+        function openNewAgendaModal() { 
+            document.getElementById('ag-action').value = 'create';
+            document.getElementById('ag-modal-title').innerHTML = '<i class="ph ph-calendar-plus mr-2 text-brand-600"></i> Agendar Espacio';
+            document.getElementById('ag-cliente').innerHTML = appData.clients.map(c=>`<option value="${c.name}">${c.name}</option>`).join(''); 
+            document.getElementById('ag-asunto-id').innerHTML = appData.asuntos.map(a=>`<option value="${a.id}">${a.id} - ${a.actividad.substring(0,25)}...</option>`).join('');
+            document.getElementById('ag-responsable').innerHTML = appData.equipo.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join(''); 
+            
+            document.getElementById('ag-honorarios').checked = false;
+            document.getElementById('ag-valor-container').classList.add('hidden');
+            document.getElementById('ag-valor-honorarios').value = '';
+            
+            document.getElementById('btn-delete-ag').classList.add('hidden'); // Ocultar botón eliminar
+            openModal('agenda-modal'); 
+        }
+
+        function editAgenda(id) {
+            const ag = appData.agenda.find(a => a.id === id);
+            if(!ag) return;
+            document.getElementById('ag-action').value = 'edit';
+            document.getElementById('ag-id').value = ag.id;
+            document.getElementById('ag-modal-title').innerHTML = '<i class="ph ph-pencil-simple mr-2 text-brand-600"></i> Editar Espacio';
+            
+            document.getElementById('ag-asunto').value = ag.asunto;
+            document.getElementById('ag-cliente').innerHTML = appData.clients.map(c=>`<option value="${c.name}">${c.name}</option>`).join('');
+            document.getElementById('ag-cliente').value = ag.cliente;
+            
+            document.getElementById('ag-asunto-id').innerHTML = appData.asuntos.map(a=>`<option value="${a.id}">${a.id} - ${a.actividad.substring(0,25)}...</option>`).join('');
+            document.getElementById('ag-responsable').innerHTML = appData.equipo.map(e=>`<option value="${e.nombre}">${e.nombre}</option>`).join('');
+            document.getElementById('ag-responsable').value = ag.responsable;
+            
+            const startDate = new Date(ag.start);
+            document.getElementById('ag-fecha').value = ag.start.split('T')[0];
+            document.getElementById('ag-hora').value = startDate.toTimeString().substring(0,5);
+            
+            const endDate = new Date(ag.end);
+            const durationHrs = (endDate - startDate) / (1000 * 60 * 60);
+            document.getElementById('ag-duracion').value = durationHrs > 0 ? Math.round(durationHrs) : 1;
+            
+            document.getElementById('ag-honorarios').checked = ag.honorarios;
+            document.getElementById('ag-valor-container').classList.toggle('hidden', !ag.honorarios);
+            document.getElementById('ag-valor-honorarios').value = '';
+            
+            document.getElementById('btn-delete-ag').classList.remove('hidden'); // Mostrar botón eliminar
+            openModal('agenda-modal');
+        }
+
+        async function submitAgenda(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-ag');
+            const ogText = btn.innerHTML; 
+            
+            const date = document.getElementById('ag-fecha').value;
+            const time = document.getElementById('ag-hora').value;
+            const duration = parseInt(document.getElementById('ag-duracion').value);
+            
+            const validation = validateAgendaTime(date, time, duration);
+            if (!validation.valid) { showToast(validation.msg, "error"); return; }
+            
+            btn.innerHTML = 'Guardando...'; btn.disabled = true;
+            
+            const [h, m] = time.split(':');
+            const endStr = `${date}T${String(parseInt(h) + duration).padStart(2, '0')}:${m}:00`;
+            
+            const actionType = document.getElementById('ag-action').value;
+            const generaHonorarios = document.getElementById('ag-honorarios').checked;
+            const valorHonorarios = generaHonorarios ? Number(document.getElementById('ag-valor-honorarios').value || 0) : 0;
+            const idAsuntoVinculado = document.getElementById('ag-asunto-id').value;
+
+            const data = {
+                id: actionType === 'create' ? `AG-${Date.now()}` : document.getElementById('ag-id').value, 
+                asunto: document.getElementById('ag-asunto').value, cliente: document.getElementById('ag-cliente').value, responsable: document.getElementById('ag-responsable').value, start: `${date}T${time}:00`, end: endStr, honorarios: generaHonorarios
+            };
+
+            const apiEndpoint = actionType === 'create' ? 'createAgenda' : 'updateAgenda';
+            const res = await fetchAPI(apiEndpoint, data);
+            
+            // Si hay cobro extra, sumar valor al Asunto vinculado
+            if (generaHonorarios && valorHonorarios > 0 && idAsuntoVinculado) {
+                const idx = appData.asuntos.findIndex(a => a.id === idAsuntoVinculado);
+                if (idx !== -1) {
+                    appData.asuntos[idx].valor = Number(appData.asuntos[idx].valor) + valorHonorarios;
+                    fetchAPI('updateAsunto', appData.asuntos[idx]); 
+                }
+            }
+
+            btn.innerHTML = ogText; btn.disabled = false;
+            closeModal('agenda-modal');
+
+            if(res && res.success) { 
+                showToast(actionType === 'create' ? "Agenda creada" : "Agenda actualizada");
+                if (generaHonorarios && valorHonorarios > 0) showToast(`Se sumaron ${formatCurrency(valorHonorarios)} al Asunto ${idAsuntoVinculado}`);
+                
+                if(actionType === 'create') { appData.agenda.push(data); }
+                else { const idx = appData.agenda.findIndex(a => a.id === data.id); if(idx !== -1) appData.agenda[idx] = data; }
+                
+                initCalendar(appData.agenda);
+                renderEquipo(appData.equipo); 
+                renderFinanzas();
+                updateNotifications();
+            } else { showToast("Error al guardar", "error"); }
+        }
+
+        function promptDeleteAgenda() {
+            openConfirmModal(
+                "Eliminar Evento",
+                "¿Estás seguro de eliminar este evento de la agenda? Esta acción no se puede deshacer.",
+                async () => {
+                    const id = document.getElementById('ag-id').value;
+                    const btn = document.getElementById('btn-delete-ag');
+                    btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-1"></i>...'; btn.disabled = true;
+                    
+                    const res = await fetchAPI('deleteAgenda', { id: id });
+                    
+                    btn.innerHTML = '<i class="ph ph-trash mr-1"></i> Eliminar'; btn.disabled = false;
+                    closeModal('agenda-modal');
+                    
+                    // Aceptamos si 'res.success' no es explícitamente false (evita fallos CORS o locales)
+                    if(res && res.success !== false) {
+                        showToast("Evento eliminado", "success");
+                        // 1. Filtrado local blindado (Convirtiendo todo a String)
+                        appData.agenda = appData.agenda.filter(a => String(a.id) !== String(id));
+                        
+                        // 2. Forzar borrado gráfico inmediato en el calendario
+                        if(calendar) {
+                            let evt = calendar.getEventById(id);
+                            if(evt) evt.remove(); 
+                        }
+                        
+                        initCalendar(appData.agenda);
+                        renderEquipo(appData.equipo);
+                        updateNotifications();
+                    } else { showToast("Error al eliminar evento", "error"); }
+                }
+            );
+        }
+
+        // Nuevas funciones de eliminación globales
+        function promptDeleteCliente() {
+            openConfirmModal("Eliminar Cliente", "¿Estás seguro de eliminar este cliente? Esta acción no se puede deshacer.", async () => {
+                const id = currentClient.id;
+                const res = await fetchAPI('deleteCliente', { id: id });
+                closeModal('detalles-modal');
+                if(res && res.success !== false) {
+                    showToast("Cliente eliminado", "success");
+                    appData.clients = appData.clients.filter(c => String(c.id) !== String(id));
+                    renderClientsTable(appData.clients);
+                } else { showToast("Error al eliminar", "error"); }
+            });
+        }
+
+        function promptDeleteAsunto() {
+            openConfirmModal("Eliminar Asunto", "¿Estás seguro de eliminar este asunto?", async () => {
+                const id = currentAsunto.id;
+                const res = await fetchAPI('deleteAsunto', { id: id });
+                closeModal('detalles-asunto-modal');
+                if(res && res.success !== false) {
+                    showToast("Asunto eliminado", "success");
+                    appData.asuntos = appData.asuntos.filter(a => String(a.id) !== String(id));
+                    renderAsuntosTable(appData.asuntos);
+                    renderFinanzas();
+                } else { showToast("Error al eliminar", "error"); }
+            });
+        }
+
+        function promptDeleteAbono() {
+            openConfirmModal("Eliminar Abono", "¿Estás seguro de anular este abono?", async () => {
+                const id = document.getElementById('ab-id').value;
+                const res = await fetchAPI('deleteAbono', { id: id });
+                closeModal('abono-modal');
+                if(res && res.success !== false) {
+                    showToast("Abono eliminado", "success");
+                    appData.abonos = appData.abonos.filter(a => String(a.idAbono) !== String(id));
+                    renderFinanzas();
+                    if(!document.getElementById('detalles-finanzas-modal').classList.contains('hidden')) openDetallesFinanzas(document.getElementById('ab-idasunto').value);
+                } else { showToast("Error al eliminar", "error"); }
+            });
+        }
+
+        function promptDeleteGasto() {
+            openConfirmModal("Eliminar Gasto", "¿Estás seguro de anular este gasto?", async () => {
+                const id = document.getElementById('ga-id').value;
+                const res = await fetchAPI('deleteGasto', { id: id });
+                closeModal('gasto-modal');
+                if(res && res.success !== false) {
+                    showToast("Gasto eliminado", "success");
+                    appData.gastos = appData.gastos.filter(a => String(a.idGasto) !== String(id));
+                    renderFinanzas();
+                    if(!document.getElementById('detalles-finanzas-modal').classList.contains('hidden') && document.getElementById('ga-idasunto').value !== 'GENERAL') openDetallesFinanzas(document.getElementById('ga-idasunto').value);
+                } else { showToast("Error al eliminar", "error"); }
+            });
+        }
+
+        // ==========================================
+        // MÓDULO EQUIPO
+        // ==========================================
+        function renderEquipo(equipo) {
+            const container = document.getElementById('equipo-container'); container.innerHTML = '';
+            const now = new Date();
+            (equipo || []).forEach(eq => { 
+                const carga = appData.asuntos ? appData.asuntos.filter(a => a.responsable === eq.nombre && a.estado !== 'Terminado').length : 0;
+                const agendasFuturas = appData.agenda ? appData.agenda.filter(ag => ag.responsable === eq.nombre && new Date(ag.start) >= now).sort((a, b) => new Date(a.start) - new Date(b.start)) : [];
+                let proxAgendaText = agendasFuturas.length > 0 ? new Date(agendasFuturas[0].start).toLocaleDateString('es-CO', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : 'Sin agenda';
+                
+                const asuntosDelAsesor = (appData.asuntos || []).filter(a => a.responsable === eq.nombre).map(a => a.id);
+                const ingresos = (appData.abonos || []).filter(ab => asuntosDelAsesor.includes(ab.idAsunto)).reduce((sum, ab) => sum + Number(ab.monto), 0);
+
+                let cardBgClass = 'bg-gray-50';
+                let cardBorderClass = 'border-gray-200';
+                
+                const nombreUpper = (eq.nombre || '').toUpperCase();
+                if (nombreUpper.includes('ALEXANDRA')) {
+                    cardBgClass = 'bg-purple-50/70';
+                    cardBorderClass = 'border-purple-200';
+                } else if (nombreUpper.includes('JULIO')) {
+                    cardBgClass = 'bg-blue-50/70';
+                    cardBorderClass = 'border-blue-200';
+                }
+
+                container.innerHTML += `
+                    <div class="${cardBgClass} border ${cardBorderClass} rounded-xl p-4 shadow-sm relative flex flex-col sm:flex-row items-start sm:items-center justify-between hover:shadow-md transition-shadow gap-4">
+                        <div class="flex items-center flex-1 w-full sm:w-auto">
+                            ${eq.foto ? `<img src="${eq.foto}" class="w-14 h-14 rounded-full mr-4 object-cover border ${cardBorderClass}">` : `<div class="w-14 h-14 bg-white rounded-full flex items-center justify-center text-gray-700 font-bold mr-4 border ${cardBorderClass} shadow-sm text-lg">${eq.nombre.substring(0,2)}</div>`}
+                            <div class="pr-6">
+                                <h3 class="text-base font-bold text-gray-900">${eq.nombre}</h3>
+                                <div class="flex flex-wrap items-center gap-2 mt-1">
+                                    <span class="text-xs bg-white text-gray-700 font-medium px-2.5 py-0.5 rounded-full border ${cardBorderClass}">${eq.rol}</span>
+                                    <span class="text-xs text-gray-500 flex items-center"><i class="ph ph-phone mr-1"></i> ${eq.telefono || '-'}</span>
+                                    <span class="text-xs text-gray-500 flex items-center"><i class="ph ph-envelope-simple mr-1"></i> ${eq.correo || '-'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-row items-center justify-around sm:justify-end gap-2 sm:gap-6 w-full sm:w-auto bg-white/60 p-3 rounded-lg border ${cardBorderClass}">
+                            <div class="text-center"><p class="text-[10px] text-gray-500 uppercase font-bold">Activos</p><p class="text-sm font-bold ${carga > 3 ? 'text-gray-900' : 'text-brand-600'}">${carga}</p></div>
+                            <div class="text-center px-2 sm:px-4 border-l border-r ${cardBorderClass}"><p class="text-[10px] text-gray-500 uppercase font-bold">Próx. Agenda</p><p class="text-sm font-bold text-gray-900">${proxAgendaText}</p></div>
+                            <div class="text-center"><p class="text-[10px] text-gray-500 uppercase font-bold">Ingresos</p><p class="text-sm font-bold text-brand-600">${formatCurrency(ingresos)}</p></div>
+                        </div>
+                        
+                        <button onclick='editEquipo(${JSON.stringify(eq)})' class="absolute top-4 right-4 sm:static sm:ml-2 text-gray-400 hover:text-brand-600 bg-white p-2 rounded-full border border-transparent hover:border-gray-200 shadow-sm transition-all"><i class="ph ph-pencil-simple text-xl"></i></button>
+                    </div>`; 
+            });
+        }
+
+        async function submitEquipo(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit-eq');
+            const ogText = btn.innerHTML; btn.innerHTML = 'Guardando...'; btn.disabled = true;
+            
+            const actionType = document.getElementById('eq-action').value;
+            const data = { 
+                id: actionType === 'create' ? `EQ-${Date.now()}` : document.getElementById('eq-id').value, 
+                nombre: document.getElementById('eq-nombre').value.toUpperCase(), rol: document.getElementById('eq-rol').value, telefono: document.getElementById('eq-telefono').value, correo: document.getElementById('eq-correo').value, foto: document.getElementById('eq-foto').value 
+            };
+            
+            const apiEndpoint = actionType === 'create' ? 'createEquipo' : 'updateEquipo';
+            const res = await fetchAPI(apiEndpoint, data);
+            
+            btn.innerHTML = ogText; btn.disabled = false;
+            closeModal('equipo-modal');
+
+            if(res && res.success) { 
+                showToast(res.message);
+                if(actionType === 'create') { appData.equipo.push(data); } 
+                else { const idx = appData.equipo.findIndex(eq => eq.id === data.id); if(idx !== -1) appData.equipo[idx] = data; }
+                renderEquipo(appData.equipo); 
+            } else { showToast(res.message || "Error al guardar", "error"); }
+        }
+
+        // ==========================================
+        // MÓDULO FINANZAS 
+        // ==========================================
+        function openAbonoModal() { 
+            document.getElementById('ab-action').value = 'create';
+            document.getElementById('ab-modal-title').textContent = 'Registrar Abono';
+            document.getElementById('ab-idasunto').value = currentCostCenterId; 
+            document.getElementById('ab-fecha').valueAsDate = new Date();
+            document.getElementById('btn-delete-ab').classList.add('hidden');
+            openModal('abono-modal'); 
+        }
+
+        function editAbono(id) {
+            const ab = appData.abonos.find(a => a.idAbono === id);
+            if(!ab) return;
+            document.getElementById('ab-action').value = 'edit';
+            document.getElementById('ab-id').value = ab.idAbono;
+            document.getElementById('ab-modal-title').textContent = 'Editar Abono';
+            document.getElementById('ab-idasunto').value = ab.idAsunto;
+            document.getElementById('ab-fecha').value = ab.fecha;
+            document.getElementById('ab-monto').value = ab.monto;
+            document.getElementById('ab-recibe').value = ab.recibe;
+            document.getElementById('ab-medio').value = ab.medio;
+            document.getElementById('btn-delete-ab').classList.remove('hidden');
+            openModal('abono-modal');
+        }
+
+        async function submitAbono(e) {
+            e.preventDefault();
+            const actionBtn = e.submitter.value;
+            const actionType = document.getElementById('ab-action').value;
+            const data = {
+                idAbono: actionType === 'create' ? `AB-${Date.now()}` : document.getElementById('ab-id').value, 
+                idAsunto: document.getElementById('ab-idasunto').value, fecha: document.getElementById('ab-fecha').value, monto: document.getElementById('ab-monto').value, recibe: document.getElementById('ab-recibe').value, medio: document.getElementById('ab-medio').value
+            };
+
+            const apiEndpoint = actionType === 'create' ? 'registrarFinanza' : 'updateFinanza';
+            const res = await fetchAPI(apiEndpoint, data); 
+            
+            closeModal('abono-modal');
+            if(res && res.success) {
+                showToast(actionType === 'create' ? "Abono guardado" : "Abono actualizado");
+                if(actionType === 'create') appData.abonos.push(data);
+                else { const idx = appData.abonos.findIndex(a => a.idAbono === data.idAbono); if(idx!==-1) appData.abonos[idx] = data; }
+                
+                renderFinanzas(); openDetallesFinanzas(data.idAsunto); renderEquipo(appData.equipo);
+                if (actionBtn === 'generar') generarPDFImpresion('RECIBO DE CAJA', data, appData.asuntos.find(a=>a.id === data.idAsunto));
+            } else { showToast(res.message || "Error", "error"); }
+        }
+
+        function openGastoModal(isAsunto = false) { 
+            document.getElementById('ga-action').value = 'create';
+            document.getElementById('ga-modal-title').textContent = 'Registrar Gasto';
+            document.getElementById('ga-idasunto').value = isAsunto ? currentCostCenterId : 'GENERAL'; 
+            document.getElementById('ga-fecha').valueAsDate = new Date();
+            document.getElementById('btn-delete-ga').classList.add('hidden');
+            openModal('gasto-modal'); 
+        }
+
+        function editGasto(id) {
+            const ga = appData.gastos.find(g => g.idGasto === id);
+            if(!ga) return;
+            document.getElementById('ga-action').value = 'edit';
+            document.getElementById('ga-id').value = ga.idGasto;
+            document.getElementById('ga-modal-title').textContent = 'Editar Gasto';
+            document.getElementById('ga-idasunto').value = ga.idAsunto;
+            document.getElementById('ga-fecha').value = ga.fecha;
+            document.getElementById('ga-monto').value = ga.monto;
+            document.getElementById('ga-beneficiario').value = ga.beneficiario;
+            document.getElementById('ga-idbeneficiario').value = ga.idBeneficiario;
+            document.getElementById('ga-concepto').value = ga.concepto;
+            document.getElementById('ga-medio').value = ga.medio;
+            document.getElementById('btn-delete-ga').classList.remove('hidden');
+            openModal('gasto-modal');
+        }
+
+        async function submitGasto(e) {
+            e.preventDefault();
+            const actionBtn = e.submitter.value;
+            const actionType = document.getElementById('ga-action').value;
+            const data = {
+                idGasto: actionType === 'create' ? `GS-${Date.now()}` : document.getElementById('ga-id').value, 
+                idAsunto: document.getElementById('ga-idasunto').value, fecha: document.getElementById('ga-fecha').value, monto: document.getElementById('ga-monto').value, beneficiario: document.getElementById('ga-beneficiario').value, idBeneficiario: document.getElementById('ga-idbeneficiario').value, concepto: document.getElementById('ga-concepto').value, medio: document.getElementById('ga-medio').value
+            };
+
+            const apiEndpoint = actionType === 'create' ? 'registrarFinanza' : 'updateFinanza';
+            const res = await fetchAPI(apiEndpoint, data);
+            
+            closeModal('gasto-modal');
+            if(res && res.success) {
+                showToast(actionType === 'create' ? "Gasto guardado" : "Gasto actualizado");
+                if(actionType === 'create') appData.gastos.push(data);
+                else { const idx = appData.gastos.findIndex(g => g.idGasto === data.idGasto); if(idx!==-1) appData.gastos[idx] = data; }
+                
+                renderFinanzas();
+                if(data.idAsunto !== 'GENERAL') openDetallesFinanzas(data.idAsunto);
+                if (actionBtn === 'generar') generarPDFImpresion('COMPROBANTE DE EGRESO', data, data.idAsunto!=='GENERAL'?appData.asuntos.find(a=>a.id === data.idAsunto):null);
+            } else { showToast(res.message || "Error", "error"); }
+        }
+
+        function openDetallesFinanzas(idAsunto) {
+            currentCostCenterId = idAsunto;
+            const asn = appData.asuntos.find(a => a.id === idAsunto);
+            document.getElementById('det-fin-id').textContent = asn.id;
+            
+            const abs = appData.abonos.filter(a => a.idAsunto === idAsunto);
+            const gts = appData.gastos.filter(g => g.idAsunto === idAsunto);
+            const totA = abs.reduce((s, a) => s + Number(a.monto), 0);
+            const totG = gts.reduce((s, g) => s + Number(g.monto), 0);
+            
+            document.getElementById('det-fin-valor').textContent = formatCurrency(asn.valor);
+            document.getElementById('det-fin-abonado').textContent = formatCurrency(totA);
+            document.getElementById('det-fin-gastos').textContent = formatCurrency(totG);
+            document.getElementById('det-fin-rentabilidad').textContent = formatCurrency(totA - totG);
+            document.getElementById('det-fin-rentabilidad').className = `text-lg font-bold ${totA - totG < 0 ? 'text-red-600' : 'text-brand-700'}`;
+            document.getElementById('det-fin-gastos').className = `text-lg font-bold ${totG > Number(asn.valor) ? 'text-red-600' : 'text-gray-600'}`;
+            
+            document.getElementById('det-abonos-body').innerHTML = abs.map(a => `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-2 border-b text-xs">${a.fecha}</td>
+                    <td class="p-2 border-b text-xs">${a.medio}</td>
+                    <td class="p-2 border-b font-bold text-brand-600 text-xs">${formatCurrency(a.monto)}</td>
+                    <td class="p-2 border-b text-right whitespace-nowrap">
+                        <button onclick="editAbono('${a.idAbono}')" class="text-gray-400 hover:text-brand-600"><i class="ph ph-pencil-simple text-lg"></i></button>
+                        <button onclick="generarPDFImpresion('RECIBO DE CAJA', appData.abonos.find(x=>x.idAbono==='${a.idAbono}'), appData.asuntos.find(x=>x.id==='${a.idAsunto}'))" class="text-gray-400 hover:text-gray-800 ml-1"><i class="ph ph-printer text-lg"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            // Renderizando cuerpo de Gastos (CON BOTÓN DE IMPRESIÓN PDF)
+            document.getElementById('det-gastos-body').innerHTML = gts.map(g => `
+                <tr class="hover:bg-gray-50">
+                    <td class="p-2 border-b text-xs">${g.fecha}</td>
+                    <td class="p-2 border-b text-xs truncate max-w-[120px]" title="${g.concepto}">${g.concepto}</td>
+                    <td class="p-2 border-b font-bold text-gray-600 text-xs">${formatCurrency(g.monto)}</td>
+                    <td class="p-2 border-b text-right whitespace-nowrap">
+                        <button onclick="editGasto('${g.idGasto}')" class="text-gray-400 hover:text-brand-600"><i class="ph ph-pencil-simple text-lg"></i></button>
+                        <button onclick="generarPDFImpresion('COMPROBANTE DE EGRESO', appData.gastos.find(x=>x.idGasto==='${g.idGasto}'), appData.asuntos.find(x=>x.id==='${g.idAsunto}'))" class="text-gray-400 hover:text-gray-800 ml-1"><i class="ph ph-printer text-lg"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            
+            openModal('detalles-finanzas-modal');
+        }
+
+        // ==========================================
+        // MÓDULO REPORTES (PDF CON FILTROS)
+        // ==========================================
+        function generarReportePDF(tipoReporte) {
+            // 1. Obtener valores de los filtros
+            const fIni = document.getElementById('rep-fecha-ini').value;
+            const fFin = document.getElementById('rep-fecha-fin').value;
+            const estadoAsn = document.getElementById('rep-estado-asn').value;
+            const tipoFin = document.getElementById('rep-tipo-fin').value; // Todos, Ingresos, Gastos
+
+            const printWindow = window.open('', '_blank');
+            const fechaActual = new Date().toLocaleString();
+            let content = '';
+            
+            let htmlFiltrosAplicados = `<div style="margin-bottom: 20px; padding: 10px; background-color: #f8fafc; border-radius: 5px; font-size: 11px; color: #475569;"><b>Filtros Aplicados:</b> `;
+            htmlFiltrosAplicados += `Desde: ${fIni || 'Inicio'} | Hasta: ${fFin || 'Fin'} | Estado Asunto: ${estadoAsn} | Tipo Mov.: ${tipoFin}</div>`;
+
+            // Estilos CSS Base para Impresión
+            const baseStyles = `
+                <style>
+                    body { font-family: 'Arial', sans-serif; padding: 30px; color: #333; font-size: 12px; }
+                    .header { text-align: center; border-bottom: 2px solid #2b4c80; padding-bottom: 15px; margin-bottom: 25px; }
+                    .header h1 { color: #1e3a63; margin: 0; font-size: 20px; }
+                    .header p { color: #666; margin: 5px 0 0 0; font-size: 10px; }
+                    table { w-full border-collapse: collapse; width: 100%; margin-bottom: 30px; }
+                    th { background-color: #f0f4f8; color: #1e3a63; text-align: left; padding: 8px; border: 1px solid #ddd; font-weight: bold; }
+                    td { padding: 8px; border: 1px solid #ddd; }
+                    .text-right { text-align: right; }
+                    .text-center { text-align: center; }
+                    .font-bold { font-weight: bold; }
+                    .total-row td { background-color: #e2e8f0; font-weight: bold; }
+                </style>
+            `;
+
+            if (tipoReporte === 'clientes') {
+                // Clientes usualmente no se filtran por fecha en este esquema
+                let filas = appData.clients.map(c => `<tr><td>${c.id}</td><td>${c.name}</td><td>${c.docType}: ${c.docNum}</td><td>${c.phone}</td><td>${c.email}</td><td>${c.mun || ''}</td></tr>`).join('');
+                content = `
+                    <div class="header"><h1>DIRECTORIO DE CLIENTES - LEXPRO</h1><p>Generado el: ${fechaActual}</p></div>
+                    <table><thead><tr><th>ID</th><th>Nombre / Razón Social</th><th>Identificación</th><th>Teléfono</th><th>Correo</th><th>Ciudad</th></tr></thead><tbody>${filas}</tbody></table>
+                `;
+            } else if (tipoReporte === 'asuntos') {
+                // Filtrando Asuntos
+                let asuntosFiltrados = appData.asuntos || [];
+                if (estadoAsn !== 'Todos') asuntosFiltrados = asuntosFiltrados.filter(a => a.estado === estadoAsn);
+                if (fIni) asuntosFiltrados = asuntosFiltrados.filter(a => a.fechaSol >= fIni);
+                if (fFin) asuntosFiltrados = asuntosFiltrados.filter(a => a.fechaSol <= fFin);
+
+                let filas = asuntosFiltrados.map(a => {
+                    let cli = appData.clients.find(c => c.id === a.idCliente);
+                    return `<tr><td>${a.id}</td><td>${cli ? cli.name : 'Desc'}</td><td>${a.tipo}</td><td>${a.estado}</td><td>${a.responsable}</td><td>${a.fechaVenc}</td><td class="text-right">${formatCurrency(a.valor)}</td></tr>`;
+                }).join('');
+                
+                content = `
+                    <div class="header"><h1>ESTADO DE ASUNTOS - LEXPRO</h1><p>Generado el: ${fechaActual}</p></div>
+                    ${htmlFiltrosAplicados}
+                    <table><thead><tr><th>ID Asunto</th><th>Cliente</th><th>Tipo</th><th>Estado</th><th>Responsable</th><th>Vencimiento</th><th class="text-right">Valor</th></tr></thead><tbody>${filas.length > 0 ? filas : '<tr><td colspan="7" class="text-center">No hay datos para estos filtros</td></tr>'}</tbody></table>
+                `;
+            } else if (tipoReporte === 'finanzas') {
+                // Filtrando Abonos y Gastos por Fecha y Tipo de Movimiento
+                let abs = appData.abonos || [];
+                let gts = appData.gastos || [];
+                
+                if (fIni) { abs = abs.filter(a => a.fecha >= fIni); gts = gts.filter(g => g.fecha >= fIni); }
+                if (fFin) { abs = abs.filter(a => a.fecha <= fFin); gts = gts.filter(g => g.fecha <= fFin); }
+                
+                if (tipoFin === 'Ingresos') gts = [];
+                if (tipoFin === 'Gastos') abs = [];
+
+                const totalAbonos = abs.reduce((s, i) => s + Number(i.monto), 0);
+                const totalGastos = gts.reduce((s, i) => s + Number(i.monto), 0);
+                const utilidad = totalAbonos - totalGastos;
+
+                // Filtrando Centros de Costo (Opcional, basado en el estado del asunto)
+                let asuntosParaFinanzas = appData.asuntos || [];
+                if (estadoAsn !== 'Todos') asuntosParaFinanzas = asuntosParaFinanzas.filter(a => a.estado === estadoAsn);
+
+                let filasCentros = asuntosParaFinanzas.map(a => {
+                    const abn = abs.filter(ab => ab.idAsunto === a.id).reduce((s, ab) => s + Number(ab.monto), 0);
+                    const gas = gts.filter(g => g.idAsunto === a.id).reduce((s, g) => s + Number(g.monto), 0);
+                    // Ocultar si está en ceros bajo el filtro actual
+                    if(abn === 0 && gas === 0) return '';
+                    return `<tr><td>${a.id}</td><td>${formatCurrency(a.valor)}</td><td class="text-right">${formatCurrency(abn)}</td><td class="text-right">${formatCurrency(gas)}</td><td class="text-right font-bold">${formatCurrency(abn-gas)}</td></tr>`;
+                }).join('');
+
+                content = `
+                    <div class="header"><h1>BALANCE FINANCIERO - LEXPRO</h1><p>Generado el: ${fechaActual}</p></div>
+                    ${htmlFiltrosAplicados}
+                    
+                    <table style="width: 50%; margin: 0 auto 30px auto;">
+                        <tr><th>Total Ingresos (Recaudado)</th><td class="text-right font-bold" style="color: green;">${formatCurrency(totalAbonos)}</td></tr>
+                        <tr><th>Total Egresos (Gastos)</th><td class="text-right font-bold" style="color: red;">${formatCurrency(totalGastos)}</td></tr>
+                        <tr class="total-row"><th>UTILIDAD NETA (Del periodo)</th><td class="text-right">${formatCurrency(utilidad)}</td></tr>
+                    </table>
+
+                    <h3 style="color:#1e3a63; border-bottom:1px solid #ccc; padding-bottom:5px;">Detalle por Centro de Costos (Asuntos con movimientos)</h3>
+                    <table><thead><tr><th>Asunto ID</th><th>Valor Contrato</th><th class="text-right">Recaudado</th><th class="text-right">Gastos Asociados</th><th class="text-right">Rentabilidad</th></tr></thead><tbody>${filasCentros || '<tr><td colspan="5" class="text-center">Sin movimientos en este periodo/filtro</td></tr>'}</tbody></table>
+                `;
+            }
+
+            let htmlStr = `<html><head><title>Reporte - LexPro</title>${baseStyles}</head><body onload="window.print()">${content}</body></html>`;
+            printWindow.document.write(htmlStr);
+            printWindow.document.close();
+        }
+
+        // =========================================================
+        // TODAS LAS DEMÁS FUNCIONES DE VISUALIZACIÓN
+        // =========================================================
+        function formatCurrency(num) { return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(num); }
+        function switchView(viewId, element) {
+            document.querySelectorAll('main > div > div[id^="view-"]').forEach(el => el.classList.add('hidden'));
+            const sv = document.getElementById('view-' + viewId); if(sv) sv.classList.remove('hidden');
+            if(viewId === 'agenda' && calendar) setTimeout(() => calendar.render(), 100);
+            if(element) { document.querySelectorAll('.nav-item').forEach(item => { item.classList.remove('nav-active', 'text-brand-600', 'border-brand-600'); item.classList.add('text-gray-600'); }); element.classList.add('nav-active'); element.classList.remove('text-gray-600'); }
+        }
+        function renderDashboard(data) {
+            document.getElementById('val-active-cases').textContent = data.summary.activeCases || 0;
+            document.getElementById('val-hearings').textContent = data.summary.monthlyHearings || 0;
+            document.getElementById('val-balance').textContent = data.summary.balance || '$ 0';
+            const ctx = document.getElementById('statusChart').getContext('2d');
+            if(myChart) myChart.destroy();
+            myChart = new Chart(ctx, { type: 'bar', data: { labels: data.chartData.labels, datasets: [{ label: 'Procesos', data: data.chartData.data, backgroundColor: '#2b4c80', borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } } });
+            renderTasks(data.tasks);
+        }
+        function renderTasks(tasks) {
+            const container = document.getElementById('tasks-container'); container.innerHTML = '';
+            if(!tasks || !tasks.length) { container.innerHTML = '<p class="text-sm text-gray-500 italic">No hay tareas pendientes.</p>'; return; }
+            tasks.forEach(t => { container.innerHTML += `<div class="flex items-start group mb-3"><div class="flex-shrink-0"><div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center"><i class="ph ph-check text-gray-500"></i></div></div><div class="ml-3 flex-1"><p class="text-sm font-medium text-gray-900 group-hover:text-brand-600 cursor-pointer">${t.title}</p><p class="text-xs text-gray-500">${t.date}</p></div></div>`; });
+        }
+        function renderClientsTable(c) {
+            const tbody = document.getElementById('clients-table-body'); tbody.innerHTML = '';
+            if(!c || !c.length) { tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-sm">Sin datos</td></tr>'; return; }
+            c.forEach(client => { 
+                const driveBtn = client.drive ? `<a href="${client.drive}" target="_blank" class="text-brand-600 hover:text-brand-800 mr-3 inline-block align-middle" title="Abrir Carpeta Drive"><i class="ph ph-google-drive-logo text-xl"></i></a>` : '';
+                tbody.innerHTML += `<tr class="hover:bg-gray-50"><td class="px-6 py-4 text-sm font-medium text-brand-600">${client.id}</td><td class="px-6 py-4 text-sm">${client.name}<br><span class="text-xs text-gray-500">${client.type}</span></td><td class="px-6 py-4 text-sm">${client.docType}: ${client.docNum}</td><td class="px-6 py-4 text-sm">${client.phone}</td><td class="px-6 py-4 text-right whitespace-nowrap">${driveBtn}<button onclick='viewClientDetails(${JSON.stringify(client)})' class="text-gray-400 hover:text-brand-600 inline-block align-middle" title="Ver Detalles"><i class="ph ph-eye text-xl"></i></button></td></tr>`; 
+            });
+        }
+        function renderAsuntosTable(a) {
+            const tbody = document.getElementById('asuntos-table-body'); tbody.innerHTML = '';
+            if(!a || !a.length) { tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-sm">Sin datos</td></tr>'; return; }
+            a.forEach(asn => { 
+                const cli = appData.clients.find(c => c.id === asn.idCliente); const cName = cli ? cli.name : 'Desconocido';
+                tbody.innerHTML += `<tr class="hover:bg-gray-50"><td class="px-6 py-4 text-sm font-bold">${asn.id}<br><span class="text-xs text-brand-600">${cName}</span></td><td class="px-6 py-4 text-sm">${asn.tipo}<br><span class="text-xs text-gray-500">${asn.actividad.substring(0,30)}...</span></td><td class="px-6 py-4 text-sm text-gray-600">${asn.responsable}</td><td class="px-6 py-4 text-sm"><span class="px-2 py-1 bg-gray-100 rounded text-xs">${asn.estado}</span></td><td class="px-6 py-4 text-right"><button onclick='viewAsuntoDetails(${JSON.stringify(asn)}, "${cName}")' class="text-gray-400 hover:text-brand-600"><i class="ph ph-eye text-xl"></i></button></td></tr>`; 
+            });
+        }
+        function renderFinanzas() {
+            const tAbonos = (appData.abonos || []).reduce((s, i) => s + Number(i.monto), 0);
+            const tGastos = (appData.gastos || []).reduce((s, i) => s + Number(i.monto), 0);
+            document.getElementById('fin-tot-recaudado').textContent = formatCurrency(tAbonos);
+            document.getElementById('fin-tot-gastos').textContent = formatCurrency(tGastos);
+            document.getElementById('fin-utilidad').textContent = formatCurrency(tAbonos - tGastos);
+
+            const tCen = document.getElementById('finanzas-centros-body'); tCen.innerHTML = '';
+            (appData.asuntos || []).forEach(asn => {
+                const cli = appData.clients.find(c => c.id === asn.idCliente); const cName = cli ? cli.name : 'Desc';
+                const abn = appData.abonos.filter(a => a.idAsunto === asn.id).reduce((s, a) => s + Number(a.monto), 0);
+                const gas = appData.gastos.filter(g => g.idAsunto === asn.id).reduce((s, g) => s + Number(g.monto), 0);
+                tCen.innerHTML += `<tr><td class="px-6 py-4 text-sm"><b>${asn.id}</b><br><span class="text-xs">${cName}</span></td><td class="px-6 py-4 text-sm">${formatCurrency(asn.valor)}</td><td class="px-6 py-4 text-sm font-bold text-brand-600">${formatCurrency(abn)}</td><td class="px-6 py-4 text-sm">${formatCurrency(gas)}</td><td class="px-6 py-4 text-sm font-bold ${abn-gas>=0?'text-brand-600':'text-red-600'}">${formatCurrency(abn-gas)}</td><td class="px-6 py-4 text-right"><button onclick="openDetallesFinanzas('${asn.id}')" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded transition-colors">Detalles</button></td></tr>`;
+            });
+
+            const tGen = document.getElementById('finanzas-general-body'); tGen.innerHTML = '';
+            const gGen = (appData.gastos || []).filter(g => g.idAsunto === 'GENERAL');
+            gGen.forEach(g => { tGen.innerHTML += `
+                <tr>
+                    <td class="px-6 py-4 text-sm">${g.fecha}</td>
+                    <td class="px-6 py-4 text-sm">${g.concepto}</td>
+                    <td class="px-6 py-4 text-sm">${g.beneficiario}</td>
+                    <td class="px-6 py-4 text-sm">${g.medio}</td>
+                    <td class="px-6 py-4 text-right font-bold text-sm text-gray-600">${formatCurrency(g.monto)}</td>
+                    <td class="px-6 py-4 text-right whitespace-nowrap">
+                        <button onclick="editGasto('${g.idGasto}')" class="text-gray-400 hover:text-brand-600 mr-2"><i class="ph ph-pencil-simple text-lg"></i></button> 
+                        <button onclick="generarPDFImpresion('COMPROBANTE DE EGRESO', appData.gastos.find(x=>x.idGasto==='${g.idGasto}'), null)" class="text-gray-400 hover:text-gray-800"><i class="ph ph-printer text-lg"></i></button>
+                    </td>
+                </tr>`; 
+            });
+        }
+        
+        // Modales Auxiliares
+        function toggleJuridicaFields() { document.getElementById('juridica-fields').classList.toggle('hidden', document.getElementById('cli-naturaleza').value !== 'Jurídica'); }
+        function viewClientDetails(client) { 
+            currentClient = client; 
+            document.getElementById('det-nombre').textContent = client.name; 
+            document.getElementById('det-id-completo').textContent = `${client.docType}: ${client.docNum}`; 
+            document.getElementById('det-codigo').textContent = client.id; 
+            document.getElementById('det-naturaleza').textContent = client.type; 
+            document.getElementById('det-telefono').textContent = client.phone; 
+            document.getElementById('det-correo').textContent = client.email; 
+            
+            const driveContainer = document.getElementById('det-cli-drive-container');
+            if(client.drive) {
+                driveContainer.classList.remove('hidden');
+                document.getElementById('det-cli-drive-link').href = client.drive;
+            } else {
+                driveContainer.classList.add('hidden');
+            }
+            
+            openModal('detalles-modal'); 
+        }
+        
+        function viewAsuntoDetails(asn, cName) { 
+            currentAsunto = asn; 
+            document.getElementById('det-asn-id').textContent = asn.id; 
+            document.getElementById('det-asn-cliente-nombre').textContent = cName; 
+            document.getElementById('det-asn-actividad').textContent = asn.actividad; 
+            document.getElementById('det-asn-responsable').textContent = asn.responsable; 
+            document.getElementById('det-asn-valor').textContent = formatCurrency(asn.valor); 
+            document.getElementById('det-asn-estado').textContent = asn.estado; 
+            document.getElementById('det-asn-tipo').textContent = asn.tipo; 
+            document.getElementById('det-asn-vencimiento').textContent = asn.fechaVenc; 
+            
+            // Actualizando la vista de detalles para reflejar "Quién Recibe"
+            document.getElementById('det-asn-pago').textContent = `${asn.pago} (${asn.quienRecibe || 'N/A'})`; 
+            
+            document.getElementById('det-asn-estado').className = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium " + (asn.estado === 'En proceso' ? 'bg-brand-100 text-brand-800' : asn.estado === 'Terminado' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-500'); 
+            openModal('detalles-asunto-modal'); 
+        }
+
+        function validateAgendaTime(dateStr, timeStr, duration) { return {valid: true}; }
+        function openNewEquipoModal() { document.getElementById('eq-action').value = 'create'; document.getElementById('eq-modal-title').textContent = 'Nuevo Asesor'; openModal('equipo-modal'); }
+        function editEquipo(eq) { document.getElementById('eq-action').value = 'edit'; document.getElementById('eq-id').value = eq.id; document.getElementById('eq-modal-title').textContent = 'Editar Asesor'; document.getElementById('eq-nombre').value = eq.nombre; document.getElementById('eq-rol').value = eq.rol; document.getElementById('eq-telefono').value = eq.telefono; document.getElementById('eq-correo').value = eq.correo; document.getElementById('eq-foto').value = eq.foto || ''; openModal('equipo-modal'); }
+        function toggleFinanzasTab(tab) { ['centros', 'general'].forEach(t => { document.getElementById('tab-'+t).className = t===tab ? 'tab-fin-active whitespace-nowrap py-4 px-1 text-sm' : 'tab-fin-inactive whitespace-nowrap py-4 px-1 text-sm'; document.getElementById('panel-'+t).classList.toggle('hidden', t!==tab); }); }
+        function openNewGastoGeneralModal() { openGastoModal(false); }
+        
+        function generarPDFImpresion(tipo, transaccion, asnObj) { 
+            const printWindow = window.open('', '_blank');
+            const fechaActual = new Date().toLocaleString();
+            
+            // Adaptación según tipo de transacción (Ingreso/Gasto)
+            const isGasto = tipo.includes('EGRESO');
+            const receptorTitle = isGasto ? 'Beneficiario' : 'Recibe';
+            const receptorValue = isGasto ? (transaccion.beneficiario + (transaccion.idBeneficiario ? ` (ID: ${transaccion.idBeneficiario})` : '')) : transaccion.recibe;
+            const concepto = isGasto ? transaccion.concepto : 'Abono a honorarios / servicios vinculados al proceso';
+            const medio = transaccion.medio || 'No especificado';
+            
+            let clienteInfo = 'Gasto General de Oficina';
+            if (asnObj) {
+                const clienteObj = appData.clients.find(c => c.id === asnObj.idCliente);
+                clienteInfo = `Asunto N° ${asnObj.id} - ${clienteObj ? clienteObj.name : 'Desconocido'}`;
+            }
+
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${tipo} N° ${transaccion.idAbono || transaccion.idGasto}</title>
+                    <style>
+                        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #2b4c80; padding-bottom: 20px; margin-bottom: 30px; }
+                        .header img { height: 90px; object-fit: contain; } /* <-- LOGO MÁS GRANDE */
+                        .header-text { text-align: right; }
+                        .header-text h1 { color: #1e3a63; margin: 0; font-size: 24px; text-transform: uppercase; }
+                        .header-text p { margin: 5px 0 0 0; color: #666; font-size: 14px; }
+                        .content-box { border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px; background-color: #f8fafc; }
+                        .row { display: flex; margin-bottom: 15px; }
+                        .label { font-weight: bold; width: 160px; color: #475569; text-transform: uppercase; font-size: 12px; }
+                        .value { flex: 1; font-size: 14px; color: #0f172a; border-bottom: 1px dotted #cbd5e1; }
+                        .amount-box { text-align: right; margin-top: 30px; padding: 15px; background-color: #f0f4f8; border-left: 5px solid #2b4c80; border-radius: 4px; }
+                        .amount-box p { margin: 0; font-size: 12px; color: #64748b; font-weight: bold; text-transform: uppercase; }
+                        .amount-box h2 { margin: 5px 0 0 0; color: #1e3a63; font-size: 28px; }
+                        .signatures { display: flex; justify-content: space-between; margin-top: 100px; }
+                        .sig-line { width: 40%; border-top: 1px solid #000; text-align: center; padding-top: 10px; font-weight: bold; font-size: 12px; color: #475569; }
+                    </style>
+                </head>
+                <body onload="setTimeout(() => window.print(), 500)">
+                    <div class="header">
+                        <img src="https://i.postimg.cc/HWBRJQtB/Logo-Lex-Pro.png" alt="Logo LexPro">
+                        <div class="header-text">
+                            <h1>${tipo}</h1>
+                            <p><strong>N° Documento:</strong> ${transaccion.idAbono || transaccion.idGasto}</p>
+                            <p><strong>Fecha Emisión:</strong> ${transaccion.fecha}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="content-box">
+                        <div class="row"><div class="label">Asociado a:</div><div class="value">${clienteInfo}</div></div>
+                        <div class="row"><div class="label">${receptorTitle}:</div><div class="value">${receptorValue}</div></div>
+                        <div class="row"><div class="label">Concepto:</div><div class="value">${concepto}</div></div>
+                        <div class="row"><div class="label">Medio de Pago:</div><div class="value">${medio}</div></div>
+                    </div>
+
+                    <div class="amount-box">
+                        <p>Valor Total</p>
+                        <h2>${formatCurrency(transaccion.monto)}</h2>
+                    </div>
+
+                    <div class="signatures">
+                        <div class="sig-line">Firma Quien Entrega</div>
+                        <div class="sig-line">Firma Quien Recibe</div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 50px; font-size: 10px; color: #94a3b8;">
+                        Generado de forma automatizada por LexPro LegalTrack el ${fechaActual}
+                    </div>
+                </body>
+                </html>
+            `;
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+        }
+        
+        // Lógica Modal Confirmación Global
+        let confirmActionCallback = null;
+        function openConfirmModal(title, message, callback) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            confirmActionCallback = callback;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            confirmActionCallback = null;
+        }
+
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); if(document.querySelector(`#${id} form`)) document.querySelector(`#${id} form`).reset(); }
+        function showToast(message, type = 'success') { const container = document.getElementById('toast-container'); const toast = document.createElement('div'); toast.className = `flex items-center p-4 text-gray-700 bg-white shadow-lg rounded-lg toast-enter ${type === 'success' ? 'border-l-4 border-brand-500' : 'border-l-4 border-gray-600'}`; toast.innerHTML = `<i class="ph ${type==='success'?'ph-check-circle text-brand-500':'ph-warning-circle text-gray-600'} text-xl mr-3"></i> <div class="text-sm font-medium">${message}</div>`; container.appendChild(toast); setTimeout(() => { toast.classList.replace('toast-enter', 'toast-exit'); setTimeout(() => toast.remove(), 300); }, 3000); }
+
+        // MOCK DATA PARA CANVAS CUANDO NO HAY URL
+        function simulateBackendResponse(action, data) {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    if (action === 'getDashboardData') {
+                        resolve({ success: true, user: "demo@canvas.com", summary: { activeCases: 1, monthlyHearings: 0, balance: "$ 500.000" }, chartData: { labels: ['P', 'EP', 'PA', 'T'], data: [0,1,0,0] }, tasks: [], clients: [{id:"2026-LP-0001", name:"Cliente Demo Canvas", type:"Natural", docType:"CC", docNum:"123", phone:"300", email:"x@x.com", dir:"", mun:"", dep:"", drive: "https://drive.google.com/drive/my-drive"}], asuntos: [{id:"AS-0001", idCliente:"2026-LP-0001", tipo:"Jurídico", actividad:"Simulación de App", fechaSol:"2026-01-01", fechaVenc:"2026-12-31", responsable:"Asesor 1", valor:"1000000", pago:"Anticipo", estado:"En proceso", prioridad:"Alta", quienRecibe:"ASESOR 1"}], equipo: [{id:"EQ-1", nombre:"ASESOR 1", rol:"Senior", telefono:"123", correo:"x@x", foto:""}], agenda: [], abonos: [{idAbono:"AB-1", idAsunto:"AS-0001", fecha:"2026-01-01", monto:500000, recibe:"Caja", medio:"Efectivo"}], gastos: [] });
+                    } else if (action.includes('delete')) {
+                        resolve({ success: true, message: "Registro eliminado correctamente" });
+                    } else {
+                        resolve({ success: true, message: "Simulación de guardado exitosa" });
+                    }
+                }, 500); // Simulando retraso de red
+            });
+        }
+    </script>
+</body>
+</html>
